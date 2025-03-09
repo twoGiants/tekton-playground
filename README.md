@@ -4,13 +4,19 @@ Collecting Tekton pipelines and tasks for tests, experimentation and more.
 
 ## Getting Started
 
+Deploy or teardown pipelines, tasks and triggers.
+
 ```bash
 # deploy
 ./scripts/tp.sh up
 
 # teardown
 ./scripts/tp.sh down
+```
 
+Test triggers.
+
+```bash
 # enable port forwarding to be able to hit the event listener
 kubectl port-forward service/el-hello-listener 8080
 
