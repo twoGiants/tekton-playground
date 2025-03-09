@@ -67,6 +67,8 @@ containerdConfigPatches:
     endpoint = ["http://${reg_name}:${reg_port}"]
 EOF
   fi
+  info "Waiting for the nodes to be ready..."
+  kubectl wait -n tekton-pipelines --for=condition=ready node --all --timeout=300s
 }
 
 connect_registry() {
@@ -84,7 +86,6 @@ install_tekton() {
   kubectl apply -f https://storage.googleapis.com/tekton-releases/dashboard/previous/${TEKTON_DASHBOARD_VERSION}/release-full.yaml
 
   info "Wait until all pods are ready..."
-  sleep 10
   kubectl wait -n tekton-pipelines --for=condition=ready pods --all --timeout=180s
   kubectl port-forward service/tekton-dashboard -n tekton-pipelines 9097:9097 &>kind-tekton-dashboard.log &
   info "Tekton Dashboard available at http://localhost:9097"
