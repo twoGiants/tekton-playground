@@ -4,6 +4,16 @@ Collecting Tekton pipelines and tasks for tests, experimentation and more.
 
 ## Getting Started
 
+Deploy or teardown kind with Tekton resources.
+
+```bash
+# deploy
+./scripts/tk8.sh
+
+# teardown
+kind delete cluster -n tekton && docker rm -f kind-registry
+```
+
 Deploy or teardown pipelines, tasks and triggers.
 
 ```bash
