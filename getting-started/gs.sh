@@ -2,13 +2,13 @@
 set -e -o pipefail
 
 up() {
-  kubectl apply -k getting-started/pipeline
-  kubectl apply -k getting-started/triggers
+  kubectl apply -k pipeline
+  kubectl apply -k triggers
 }
 
 down() {
-  kubectl delete -k getting-started/pipeline
-  kubectl delete -k getting-started/triggers
+  kubectl delete -k pipeline
+  kubectl delete -k triggers
 }
 
 usage() {

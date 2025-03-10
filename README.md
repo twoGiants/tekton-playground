@@ -2,7 +2,16 @@
 
 Collecting Tekton pipelines and tasks for tests, experimentation and more.
 
-## Getting Started
+## Prerequisites
+
+- `kind`
+- `docker`
+- `kubectl`
+- `tkn`
+- `cosign`
+- `jq`
+
+## Deploy Cluster
 
 Deploy or teardown kind with Tekton resources.
 
@@ -10,32 +19,14 @@ Deploy or teardown kind with Tekton resources.
 # deploy
 ./scripts/tk8.sh
 
-# teardown
-kind delete cluster -n tekton && docker rm -f kind-registry
+# teardown but keep the registry for image caching
+kind delete cluster -n tekton
+
+# delete registry if you want
+docker rm -f kind-registry
 ```
 
-Deploy or teardown pipelines, tasks and triggers.
+## Samples
 
-```bash
-# deploy
-./scripts/tp.sh up
-
-# teardown
-./scripts/tp.sh down
-```
-
-Test triggers.
-
-```bash
-# enable port forwarding to be able to hit the event listener
-kubectl port-forward service/el-hello-listener 8080
-
-# trigger pipeline run via http request
-curl -v \
-   -H 'content-Type: application/json' \
-   -d '{"username": "Tekton"}' \
-   http://localhost:8080
-
-# check logs
-tkn pr logs hello-goodbye-run-
-```
+1. [Getting Started Sample](docs/getting-started-sample.md)
+1. [Chains Sample](docs/chains-sample.md)
