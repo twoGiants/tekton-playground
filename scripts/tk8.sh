@@ -14,7 +14,7 @@ info() {
 }
 
 check_defaults() {
-  info "Check and defaults input params"
+  info "Check and defaults input params..."
   export KIND_CLUSTER_NAME=${CLUSTER_NAME:-"tekton"}
 
   if [ -z "$TEKTON_PIPELINE_VERSION" ]; then
@@ -33,11 +33,12 @@ check_defaults() {
 }
 
 create_registry() {
-  info "Create registry container unless it already exists..."
+  info "Checking if registry exists..."
   reg_name='kind-registry'
   reg_port='5000'
   running="$(${CONTAINER_RUNTIME} inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)"
   if [ "${running}" != 'true' ]; then
+    info "Registry does not exist, creating..."
     # It may exists and not be running, so cleanup just in case
     "$CONTAINER_RUNTIME" rm "${reg_name}" 2>/dev/null || true
     # And start a new one
@@ -45,13 +46,16 @@ create_registry() {
       -d --restart=always -p "${reg_port}:5000" --name "${reg_name}" \
       registry:2
     info "Registry started..."
+  else
+    info "Registry exists..."
   fi
 }
 
 create_cluster() {
-  info "Create a cluster with the local registry enabled in containerd..."
+  info "Checking if cluster exists..."
   running_cluster=$(kind get clusters | grep "$KIND_CLUSTER_NAME" || true)
   if [ "${running_cluster}" != "$KIND_CLUSTER_NAME" ]; then
+    info "Cluster does not exist, creating with the local registry enabled in containerd..."
     cat <<EOF | kind create cluster --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -66,28 +70,42 @@ containerdConfigPatches:
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${reg_name}:${reg_port}"]
     endpoint = ["http://${reg_name}:${reg_port}"]
 EOF
+    info "Waiting for the nodes to be ready..."
+    kubectl wait -n tekton-pipelines --for=condition=ready node --all --timeout=300s
+  else
+    info "Cluster exists..."
   fi
-  info "Waiting for the nodes to be ready..."
-  kubectl wait -n tekton-pipelines --for=condition=ready node --all --timeout=300s
 }
 
 connect_registry() {
-  info "Connect the registry to the cluster network..."
-  "$CONTAINER_RUNTIME" network connect "kind" "${reg_name}" || true
-  info "Connection established..."
+  info "Check if registry is connected to the cluster network..."
+  connected_registry=$("$CONTAINER_RUNTIME" network inspect kind -f '{{json .Containers}}' | grep -q "${reg_name}" && echo "true" || echo "false")
+  if [ "${connected_registry}" != 'true' ]; then
+    info "Registry is not connected, connecting the registry to the cluster network..."
+    "$CONTAINER_RUNTIME" network connect "kind" "${reg_name}" || true
+    info "Connection established..."
+  else
+    info "Registry is connected..."
+  fi
 }
 
 install_tekton() {
-  info "Install Tekton Pipeline, Triggers and Dashboard..."
-  kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/previous/${TEKTON_PIPELINE_VERSION}/release.yaml
-  kubectl apply -f https://storage.googleapis.com/tekton-releases/triggers/previous/${TEKTON_TRIGGERS_VERSION}/release.yaml
-  kubectl wait --for=condition=Established --timeout=30s crds/clusterinterceptors.triggers.tekton.dev || true # Starting from triggers v0.13
-  kubectl apply -f https://storage.googleapis.com/tekton-releases/triggers/previous/${TEKTON_TRIGGERS_VERSION}/interceptors.yaml || true
-  kubectl apply -f https://storage.googleapis.com/tekton-releases/dashboard/previous/${TEKTON_DASHBOARD_VERSION}/release-full.yaml
+  info "Checking if Tekton is installed in the cluster..."
+  running_tekton=$(kubectl get crds | grep -q "pipelines.tekton.dev" && echo "true" || echo "false")
+  if [ "${running_tekton}" != 'true' ]; then  
+    info "Tekton is not installed, installing Tekton Pipeline, Triggers and Dashboard..."
+    kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/previous/${TEKTON_PIPELINE_VERSION}/release.yaml
+    kubectl apply -f https://storage.googleapis.com/tekton-releases/triggers/previous/${TEKTON_TRIGGERS_VERSION}/release.yaml
+    kubectl wait --for=condition=Established --timeout=30s crds/clusterinterceptors.triggers.tekton.dev || true # Starting from triggers v0.13
+    kubectl apply -f https://storage.googleapis.com/tekton-releases/triggers/previous/${TEKTON_TRIGGERS_VERSION}/interceptors.yaml || true
+    kubectl apply -f https://storage.googleapis.com/tekton-releases/dashboard/previous/${TEKTON_DASHBOARD_VERSION}/release-full.yaml
 
-  info "Wait until all pods are ready..."
-  kubectl wait -n tekton-pipelines --for=condition=ready pods --all --timeout=180s
-  kubectl port-forward service/tekton-dashboard -n tekton-pipelines 9097:9097 &>kind-tekton-dashboard.log &
+    info "Wait until all pods are ready..."
+    kubectl wait -n tekton-pipelines --for=condition=ready pods --all --timeout=180s
+    kubectl port-forward service/tekton-dashboard -n tekton-pipelines 9097:9097 &>kind-tekton-dashboard.log &
+  else
+    info "Tekton is installed..."
+  fi
   info "Tekton Dashboard available at http://localhost:9097"
 }
 
