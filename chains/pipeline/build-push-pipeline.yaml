@@ -1,0 +1,36 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-push
+spec:
+  params:
+    - name: image-reference
+      type: string
+  results:
+    - name: image-ARTIFACT_OUTPUTS
+      description: Built artifact.
+      value:
+        uri: $(tasks.kaniko-build.results.IMAGE_URL)
+        digest: sha1:$(tasks.kaniko-build.results.IMAGE_DIGEST)
+  workspaces:
+    - name: shared-data
+  tasks:
+    # 1. Task: dockerfile
+    - name: dockerfile
+      taskRef:
+        name: create-dockerfile
+      workspaces:
+        - name: source
+          workspace: shared-data
+
+    # 2. Task: kaniko-build
+    - name: kaniko-build
+      runAfter: ["dockerfile"]
+      taskRef:
+        name: kaniko
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: IMAGE
+          value: $(params.image-reference)

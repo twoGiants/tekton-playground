@@ -1,0 +1,16 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: create-dockerfile
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: add-dockerfile
+      workingDir: $(workspaces.source.path)
+      image: bash
+      script: |
+        cat <<EOF > Dockerfile
+        FROM alpine:3.16
+        RUN echo "hello world" > hello.log
+        EOF

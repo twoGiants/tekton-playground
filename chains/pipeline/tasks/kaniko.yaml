@@ -1,58 +1,4 @@
-apiVersion: tekton.dev/v1
-kind: Pipeline
-metadata:
-  name: build-push
-spec:
-  params:
-    - name: image-reference
-      type: string
-  results:
-    - name: image-ARTIFACT_OUTPUTS
-      description: Built artifact.
-      value:
-        uri: $(tasks.kaniko-build.results.IMAGE_URL)
-        digest: sha1:$(tasks.kaniko-build.results.IMAGE_DIGEST)
-  workspaces:
-    - name: shared-data
-  tasks:
-    # 1. Task: dockerfile
-    - name: dockerfile
-      taskRef:
-        name: create-dockerfile
-      workspaces:
-        - name: source
-          workspace: shared-data
-
-    # 2. Task: kaniko-build
-    - name: kaniko-build
-      runAfter: ["dockerfile"]
-      taskRef:
-        name: kaniko
-      workspaces:
-        - name: source
-          workspace: shared-data
-      params:
-        - name: IMAGE
-          value: $(params.image-reference)
----
-apiVersion: tekton.dev/v1
-kind: Task
-metadata:
-  name: create-dockerfile
-spec:
-  workspaces:
-    - name: source
-  steps:
-    - name: add-dockerfile
-      workingDir: $(workspaces.source.path)
-      image: bash
-      script: |
-        cat <<EOF > Dockerfile
-        FROM alpine:3.16
-        RUN echo "hello world" > hello.log
-        EOF
----
-apiVersion: tekton.dev/v1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: kaniko
@@ -106,6 +52,8 @@ spec:
         - --context=$(workspaces.source.path)/$(params.CONTEXT) # The user does not need to care the workspace and the source.
         - --destination=$(params.IMAGE)
         - --digest-file=$(results.IMAGE_DIGEST.path)
+        - --insecure
+        - --skip-tls-verify
       # kaniko assumes it is running as root, which means this example fails on platforms
       # that default to run containers as random uid (like OpenShift). Adding this securityContext
       # makes it explicit that it needs to run as root.
