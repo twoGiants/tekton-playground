@@ -63,3 +63,15 @@ kubectl --validate
 **CRDs**
 
 tba...
+
+**Controllers**
+
+tba...
+
+**Webhooks**
+
+tba...
+
+**Generated Code**
+
+tba...
