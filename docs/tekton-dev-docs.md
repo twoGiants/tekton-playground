@@ -28,6 +28,8 @@ kubectl --validate
 
 Tekton objects like Tasks, TaskRuns, etc. are implemented as CRDs and defined [here](https://github.com/tektoncd/pipeline/tree/main/config) with the schemas in Go [here](https://github.com/tektoncd/pipeline/tree/main/pkg/apis/pipeline/v1).
 
+[CRD Tutorial](https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/).
+
 ### Controllers
 
 > **Reconciling**: a [custom controller](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#custom-controllers) changes the clusters state based on an instance of a CRD.
@@ -38,15 +40,14 @@ Not all Tekton CRDs use controllers. There is no *reconciler* for Tasks, you nee
 
 TaskRun *reconciler* is [here](https://github.com/tektoncd/pipeline/blob/main/pkg/reconciler/taskrun/taskrun.go) and PipelineRun [here](https://github.com/tektoncd/pipeline/blob/main/pkg/reconciler/pipelinerun/pipelinerun.go).
 
-### Webhooks
+Build a controller using Kubebuilder [tutorial](https://book.kubebuilder.io/introduction.html) (Tekton uses Knative).
 
-tba...
+### Admission Webhooks
+
+Tekton CRDs use validating and some mutating admission webhooks.
+
+[Admission webhooks](https://web.archive.org/web/20230928184501/https://banzaicloud.com/blog/k8s-admission-webhooks/) in-depth.
 
 ### Generated Code
 
 tba...
-
-### Useful Links
-
-- [CRD Tutorial](https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/): not sure if needed.
-- ["Build a controller" tutorial](https://book.kubebuilder.io/introduction.html), using Kubebuilder: Tekton uses Knative.
