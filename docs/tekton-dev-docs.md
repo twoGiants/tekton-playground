@@ -32,7 +32,11 @@ Tekton objects like Tasks, TaskRuns, etc. are implemented as CRDs and defined [h
 
 > **Reconciling**: a [custom controller](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#custom-controllers) changes the clusters state based on an instance of a CRD.
 
-Reconcilers change the cluster based on the desired behavior in an object's "spec", and update the object's "status" to reflect what happened.
+*Reconcilers* change the cluster based on the desired behavior in an object's "spec", and update the object's "status" to reflect what happened.
+
+Not all Tekton CRDs use controllers. There is no *reconciler* for Tasks, you need to use a TaskRun which is executed by a TaskRun *reconciler*.
+
+TaskRun *reconciler* is [here](https://github.com/tektoncd/pipeline/blob/main/pkg/reconciler/taskrun/taskrun.go) and PipelineRun [here](https://github.com/tektoncd/pipeline/blob/main/pkg/reconciler/pipelinerun/pipelinerun.go).
 
 ### Webhooks
 
@@ -42,4 +46,7 @@ tba...
 
 tba...
 
-### 
+### Useful Links
+
+- [CRD Tutorial](https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/): not sure if needed.
+- ["Build a controller" tutorial](https://book.kubebuilder.io/introduction.html), using Kubebuilder: Tekton uses Knative.
