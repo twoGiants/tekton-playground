@@ -50,4 +50,4 @@ Tekton CRDs use validating and some mutating admission webhooks.
 
 ### Generated Code
 
-tba...
+[This](https://github.com/tektoncd/pipeline/blob/main/docs/developers/controller-logic.md#generated-code) needs more clarification once development is started.
