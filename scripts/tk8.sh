@@ -71,7 +71,7 @@ containerdConfigPatches:
     endpoint = ["http://${reg_name}:${reg_port}"]
 EOF
     info "Waiting for the nodes to be ready..."
-    kubectl wait -n tekton-pipelines --for=condition=ready node --all --timeout=600s
+    kubectl wait --for=condition=ready node --all --timeout=600s
   else
     info "Cluster exists..."
   fi
