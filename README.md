@@ -4,13 +4,13 @@ Collecting Tekton knowledge, pipelines and tasks for tests, experimentation and 
 
 ## Table of Contents
 
-1. Samples
-   - [Getting Started Sample](getting-started/getting-started-sample.md)
-   - [Chains Sample](chains/chains-sample.md)
 1. [Prerequisites](#prerequisites)
 1. [Deploy Cluster](#deploy-cluster)
 1. [Registry](cluster/registry.md)
 1. [Tekton Developer Documentation](docs/tekton-dev-docs.md)
+1. Samples
+   - [Getting Started Sample](getting-started/getting-started-sample.md)
+   - [Chains Sample](chains/chains-sample.md)
 
 ## Prerequisites
 
