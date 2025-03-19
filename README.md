@@ -25,7 +25,7 @@ Collecting Tekton knowledge, pipelines and tasks for tests, experimentation and 
 
 Deploy or teardown kind with Tekton resources.
 
-```bash
+```sh
 # deploy
 ./scripts/tk8.sh
 

@@ -6,7 +6,7 @@ In this setup multiple registries are configured and connected to the kind clust
 
 The registry stores its data in the `./cluster/data/local` directory of this project. The line `-v ./data/local:/var/lib/registry:z` below configures the registry to use a mounted volume on the host.The ending `:z` is needed on systems running with selinux enabled. Remove if needed.
 
-```bash
+```sh
 docker run \
   -d \
   --restart=always \

@@ -14,7 +14,7 @@
 - status: current state, provided by the control plane
 
 ### Validation
-```bash
+```sh
 kubectl --validate
 ```
 
