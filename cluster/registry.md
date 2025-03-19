@@ -16,3 +16,33 @@ docker run \
   registry:2
 ```
 Read the official docs [here](https://distribution.github.io/distribution/about/deploying/#storage-customization).
+
+## Podman
+
+If you start a registry using podman you need to add an entry to `/etc/containers/registries.conf` or you wont be able to push to it.
+
+```conf
+[[registry]]
+insecure = true 
+location = "localhost:5000"
+```
+
+Test pushing to local registry and pulling from it.
+
+```sh
+# pull from public registry
+podman pull docker.io/library/busybox
+
+# tag, the prefix tells podman to use local registry
+podman tag busybox:latest localhost:5000/my-busybox
+
+# push to local registry
+podman push localhost:5000/my-busybox:latest
+
+# delete images
+podman image remove busybox:latest
+podman image remove localhost:5000/my-busybox
+
+# pull from local registry
+podman pull localhost:5000/my-busybox
+```
