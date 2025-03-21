@@ -12,9 +12,7 @@ create_local_registry() {
   running="$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)"
   if [ "${running}" != 'true' ]; then
     info "Registry '$reg_name' does not exist, creating..."
-    # It may exists and not be running, so cleanup just in case
     docker rm "${reg_name}" 2>/dev/null || true
-    # And start a new one
     docker run \
       -d \
       --restart=always \

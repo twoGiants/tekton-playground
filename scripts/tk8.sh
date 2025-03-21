@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e -o pipefail
 
-declare TEKTON_PIPELINE_VERSION TEKTON_TRIGGERS_VERSION TEKTON_DASHBOARD_VERSION
+declare TEKTON_PIPELINE_VERSION TEKTON_TRIGGERS_VERSION TEKTON_DASHBOARD_VERSION CLUSTER_CONFIG
 
 get_latest_release() {
   curl --silent "https://api.github.com/repos/$1/releases/latest" |
@@ -29,6 +29,10 @@ check_defaults() {
   if [ -z "$CONTAINER_RUNTIME" ]; then
     CONTAINER_RUNTIME="docker"
   fi
+  if [ -z "$CLUSTER_CONFIG" ]; then
+    CLUSTER_CONFIG="three-nodes-cluster.yaml"
+  fi
+
   info "Using container runtime: $CONTAINER_RUNTIME"
 }
 
@@ -39,11 +43,12 @@ create_registry() {
   running="$(${CONTAINER_RUNTIME} inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)"
   if [ "${running}" != 'true' ]; then
     info "Registry does not exist, creating..."
-    # It may exists and not be running, so cleanup just in case
     "$CONTAINER_RUNTIME" rm "${reg_name}" 2>/dev/null || true
-    # And start a new one
     "$CONTAINER_RUNTIME" run \
-      -d --restart=always -p "${reg_port}:5000" --name "${reg_name}" \
+      -d \
+      --restart=always \
+      -p "${reg_port}:5000" \
+      --name "${reg_name}" \
       registry:2
     info "Registry started..."
   else
@@ -56,20 +61,7 @@ create_cluster() {
   running_cluster=$(kind get clusters | grep "$KIND_CLUSTER_NAME" || true)
   if [ "${running_cluster}" != "$KIND_CLUSTER_NAME" ]; then
     info "Cluster does not exist, creating with the local registry enabled in containerd..."
-    cat <<EOF | kind create cluster --config=-
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-nodes:
-  - role: control-plane
-  - role: worker
-  - role: worker
-containerdConfigPatches:
-- |-
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:${reg_port}"]
-    endpoint = ["http://${reg_name}:${reg_port}"]
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${reg_name}:${reg_port}"]
-    endpoint = ["http://${reg_name}:${reg_port}"]
-EOF
+    kind create cluster --config="$CLUSTER_CONFIG"
     info "Waiting for the nodes to be ready..."
     kubectl wait --for=condition=ready node --all --timeout=600s
   else
@@ -126,7 +118,7 @@ while getopts ":c:p:t:d:" opt; do
   \?)
     echo "Invalid option: $OPTARG" 1>&2
     echo 1>&2
-    echo "Usage: tekton_in_kind.sh [-c cluster-name -p pipeline-version -t triggers-version -d dashboard-version]"
+    echo "Usage: tk8.sh [-c cluster-name -p pipeline-version -t triggers-version -d dashboard-version]"
     ;;
   :)
     echo "Invalid option: $OPTARG requires an argument" 1>&2
