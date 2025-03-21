@@ -1,6 +1,6 @@
-# Registry
+# Registry 
 
-In this setup multiple registries are configured and connected to the kind cluster. One for locally build images and one for each of the big public registries docker.io, quay.io, gcr.io and ghcr.io. Every registry is storing its data on the hosts filesystem in a mounted volume so you can safely stop and remove the registry containers when you delete the kind cluster without loosing the cached images and the need for a new download. This greatly reduces the startup time of the kind cluster, Tekton components and locally build images.
+**WIP:** In this setup multiple registries are configured and connected to the kind cluster. One for locally build images and one for each of the big public registries docker.io, quay.io, gcr.io and ghcr.io. Every registry is storing its data on the hosts filesystem in a mounted volume so you can safely stop and remove the registry containers when you delete the kind cluster without loosing the cached images and the need for a new download. This greatly reduces the startup time of the kind cluster, Tekton components and locally build images.
 
 ## Local
 
@@ -16,6 +16,27 @@ docker run \
   registry:2
 ```
 Read the official docs [here](https://distribution.github.io/distribution/about/deploying/#storage-customization).
+
+## Testing
+
+Test connection to the registry from the cluster.
+
+```sh
+# pull from public registry
+docker pull docker.io/library/busybox
+
+# tag, the prefix tells podman to use local registry
+docker tag busybox:latest localhost:5000/my-busybox
+
+# push to local registry
+docker push localhost:5000/my-busybox:latest
+
+# deploy pod
+kubectl apply -f cluster/testing/busybox-hello-pod.yaml
+
+# watch pod
+kubectl get po hello-busybox -w
+```
 
 ## Podman
 
