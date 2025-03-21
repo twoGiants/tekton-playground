@@ -36,6 +36,9 @@ kubectl apply -f cluster/testing/busybox-hello-pod.yaml
 
 # watch pod
 kubectl get po hello-busybox -w
+
+# check log message: "Hello, Kubernetes!"
+kubectl logs hello-busybox
 ```
 
 ## Podman
