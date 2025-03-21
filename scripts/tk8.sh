@@ -56,12 +56,18 @@ create_registry() {
   fi
 }
 
+load_config() {
+  local config
+  config=$(sed "s/\${reg_name}/${reg_name}/g; s/\${reg_port}/${reg_port}/g" "$CLUSTER_CONFIG")
+  echo "$config"
+}
+
 create_cluster() {
   info "Checking if cluster exists..."
   running_cluster=$(kind get clusters | grep "$KIND_CLUSTER_NAME" || true)
   if [ "${running_cluster}" != "$KIND_CLUSTER_NAME" ]; then
     info "Cluster does not exist, creating with the local registry enabled in containerd..."
-    kind create cluster --config="$CLUSTER_CONFIG"
+    kind create cluster --config=<(load_config)
     info "Waiting for the nodes to be ready..."
     kubectl wait --for=condition=ready node --all --timeout=600s
   else
@@ -86,11 +92,11 @@ install_tekton() {
   running_tekton=$(kubectl get crds | grep -q "pipelines.tekton.dev" && echo "true" || echo "false")
   if [ "${running_tekton}" != 'true' ]; then  
     info "Tekton is not installed, installing Tekton Pipeline, Triggers and Dashboard..."
-    kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/previous/${TEKTON_PIPELINE_VERSION}/release.yaml
-    kubectl apply -f https://storage.googleapis.com/tekton-releases/triggers/previous/${TEKTON_TRIGGERS_VERSION}/release.yaml
+    kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/previous/"${TEKTON_PIPELINE_VERSION}"/release.yaml
+    kubectl apply -f https://storage.googleapis.com/tekton-releases/triggers/previous/"${TEKTON_TRIGGERS_VERSION}"/release.yaml
     kubectl wait --for=condition=Established --timeout=30s crds/clusterinterceptors.triggers.tekton.dev || true # Starting from triggers v0.13
-    kubectl apply -f https://storage.googleapis.com/tekton-releases/triggers/previous/${TEKTON_TRIGGERS_VERSION}/interceptors.yaml || true
-    kubectl apply -f https://storage.googleapis.com/tekton-releases/dashboard/previous/${TEKTON_DASHBOARD_VERSION}/release-full.yaml
+    kubectl apply -f https://storage.googleapis.com/tekton-releases/triggers/previous/"${TEKTON_TRIGGERS_VERSION}"/interceptors.yaml || true
+    kubectl apply -f https://storage.googleapis.com/tekton-releases/dashboard/previous/"${TEKTON_DASHBOARD_VERSION}"/release-full.yaml
 
     info "Wait until all pods are ready..."
     kubectl wait -n tekton-pipelines --for=condition=ready pods --all --timeout=600s
