@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e -o pipefail
 
-declare TEKTON_PIPELINE_VERSION TEKTON_TRIGGERS_VERSION TEKTON_DASHBOARD_VERSION CLUSTER_CONFIG
+declare TEKTON_PIPELINE_VERSION TEKTON_TRIGGERS_VERSION TEKTON_DASHBOARD_VERSION CLUSTER_CONFIG SKIP_TEKTON_INSTALL
 
 get_latest_release() {
   curl --silent "https://api.github.com/repos/$1/releases/latest" |
@@ -30,7 +30,7 @@ check_defaults() {
     CONTAINER_RUNTIME="docker"
   fi
   if [ -z "$CLUSTER_CONFIG" ]; then
-    CLUSTER_CONFIG="three-nodes-cluster.yaml"
+    CLUSTER_CONFIG="scripts/three-nodes-cluster.yaml"
   fi
 
   info "Using container runtime: $CONTAINER_RUNTIME"
@@ -101,7 +101,7 @@ install_tekton() {
   info "Tekton Dashboard available at http://localhost:9097"
 }
 
-while getopts ":c:p:t:d:" opt; do
+while getopts ":c:p:t:d:s" opt; do
   case ${opt} in
   c)
     CLUSTER_NAME=$OPTARG
@@ -114,6 +114,9 @@ while getopts ":c:p:t:d:" opt; do
     ;;
   d)
     TEKTON_DASHBOARD_VERSION=$OPTARG
+    ;;
+  s)
+    SKIP_TEKTON_INSTALL=true
     ;;
   \?)
     echo "Invalid option: $OPTARG" 1>&2
@@ -131,4 +134,9 @@ check_defaults
 create_registry
 create_cluster
 connect_registry
-install_tekton
+
+if [ -z "$SKIP_TEKTON_INSTALL" ]; then 
+  install_tekton
+else
+  info "Skipping Tekton installation..."
+fi
