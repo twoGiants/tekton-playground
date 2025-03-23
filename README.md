@@ -28,10 +28,10 @@ Deploy or teardown kind with Tekton resources.
 
 ```sh
 # deploy kind with Tekton
-./scripts/tk8.sh
+./cluster/cluster.sh
 
 # deploy only kind
-./scripts/tk8.sh -s
+./cluster/cluster.sh -s
 
 # teardown but keep the registry for image caching
 kind delete cluster -n tekton
