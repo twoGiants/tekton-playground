@@ -67,4 +67,36 @@ kubectl get -o yaml taskrun "<task-run-name>" | less
 - you can embed tasks in TaskRuns
 - k8 starts containers in a pod at once but tekton wants the step containers executed one after another -> realized through `entrypoint` logic
 
+### TaskRun Controller
 
+How does a controller turn a TaskRun into a pod? Inside the controller is a reconciler which implements a reconcile loop. It's job is to turn the YAML description and turn it into a k8 pod. This is how it looks.
+
+```
+ |-> TaskRun reconciler gets notified o new TaskRun
+ |              ↓
+ |   Receives TaskRun data
+ |              ↓
+ |   Converts TaskRun to Pod
+ |              ↓
+ |   Submits Pod to k8s
+ |              ↓
+ |   Pod executes containers, changes status, emits events
+ |              ↓
+ |-- Changes are reported to k8s. K8s notifies TaskRun reconciler
+```
+
+Next is the loop when the reconciler gets notified when a pod already exists and it gets notified about its status.
+
+```
+ |-> TaskRun reconciler gets notified of Pod updates
+ |              ↓
+ |   Looks up Pod data
+ |              ↓
+ |   "Reconciles" Pod state with TaskRun state
+ |              ↓
+ |   Records new status in TaskRun
+ |              ↓
+ |   Pod continues executing, emitting events
+ |              ↓
+ |-- Events and status updates reported to k8s. K8s notifies TaskRun reconciler
+```
