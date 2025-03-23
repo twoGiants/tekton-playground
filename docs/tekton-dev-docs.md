@@ -51,3 +51,20 @@ Tekton CRDs use validating and some mutating admission webhooks.
 ### Generated Code
 
 [This](https://github.com/tektoncd/pipeline/blob/main/docs/developers/controller-logic.md#generated-code) needs more clarification once development is started.
+
+## Technical Deep Dive
+
+### Tasks
+
+- each step is a kubernetes container
+- `script` field is not available => tekton extend kubernetes containers
+- TaskRun creates a pod and runs each step as a container in that pod
+- get the pod name which the TaskRun created
+
+```sh
+kubectl get -o yaml taskrun "<task-run-name>" | less
+```
+- you can embed tasks in TaskRuns
+- k8 starts containers in a pod at once but tekton wants the step containers executed one after another -> realized through `entrypoint` logic
+
+
