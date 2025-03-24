@@ -30,7 +30,7 @@ check_defaults() {
     CONTAINER_RUNTIME="docker"
   fi
   if [ -z "$CLUSTER_CONFIG" ]; then
-    CLUSTER_CONFIG="scripts/three-nodes-cluster.yaml"
+    CLUSTER_CONFIG="cluster/three-nodes-cluster.yaml"
   fi
 
   info "Using container runtime: $CONTAINER_RUNTIME"
