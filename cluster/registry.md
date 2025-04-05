@@ -1,4 +1,4 @@
-# Registry 
+# Registry
 
 **WIP:** In this setup multiple registries are configured and connected to the kind cluster. One for locally build images and one for each of the big public registries docker.io, quay.io, gcr.io and ghcr.io. Every registry is storing its data on the hosts filesystem in a mounted volume so you can safely stop and remove the registry containers when you delete the kind cluster without loosing the cached images and the need for a new download. This greatly reduces the startup time of the kind cluster, Tekton components and locally build images.
 
@@ -15,6 +15,7 @@ docker run \
   -v ./data/local:/var/lib/registry:z \
   registry:2
 ```
+
 Read the official docs [here](https://distribution.github.io/distribution/about/deploying/#storage-customization).
 
 ## Testing
