@@ -73,7 +73,60 @@ kubectl get -o yaml taskrun "<task-run-name>" | less
 
 ### TaskRun Controller
 
-How does a controller turn a `TaskRun` into a pod? Inside the controller is a reconciler which implements a reconcile loop. It's job is to turn the YAML description and turn it into a k8 pod. This is how it looks.
+A controller is an object which encapsulates all the required resources during the reconcile loop. [Here](https://github.com/tektoncd/pipeline/blob/b7a37285e85090ecbcd70ebeba97eb5ddfeb8ad5/pkg/reconciler/taskrun/controller.go#L55) is the `TaskRun` controller:
+
+```go
+func NewController(
+  opts *pipeline.Options, 
+  clock clock.PassiveClock,
+) func(context.Context, configmap.Watcher) *controller.Impl {
+  return func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+    logger := logging.FromContext(ctx)
+    kubeclientset := kubeclient.Get(ctx)
+    pipelineclientset := pipelineclient.Get(ctx)
+    taskRunInformer := taskruninformer.Get(ctx)
+    podInformer := filteredpodinformer.Get(ctx, v1.ManagedByLabelKey)
+
+    // ...
+
+    if _, err := podInformer.Informer().AddEventHandler(
+      cache.FilteringResourceEventHandler{
+        FilterFunc: controller.FilterController(&v1.TaskRun{}),
+        Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+      },
+    ); err != nil {
+      logging.FromContext(ctx).Panicf("Couldn't register Pod informer event handler: %w", err)
+    }
+
+    // ...
+```
+
+We see a collection of objects called *informers*. An *informer* is used by a controller to listen for changes in the status of resources. We are adding event listeners which listen for changes in the Pod and they filter those changes to those which are related to the `TaskRun` controller. In the diagram below this is the last step *"K8s notifies TaskRun reconciler"*. Here we're registering to receive those events.
+
+[Here](https://github.com/tektoncd/pipeline/blob/b7a37285e85090ecbcd70ebeba97eb5ddfeb8ad5/pkg/reconciler/taskrun/taskrun.go#L115) is the `TaskRun` *reconciler*:
+
+```go
+func (c *Reconciler) ReconcileKind(ctx context.Context, tr *v1.TaskRun) pkgreconciler.Event {
+  // ...
+  
+  // Reconcile this copy of the task run and then write back any status
+  // updates regardless of whether the reconciliation errored out.
+  if err = c.reconcile(ctx, tr, rtr); err != nil {
+    logger.Errorf("Reconcile: %v", err.Error())
+    // ...
+  }
+}
+
+// ...
+
+func (c *Reconciler) reconcile(ctx context.Context, tr *v1.TaskRun, rtr *resources.ResolvedTask) error {
+  // ...
+}
+```
+
+The `ReconcileKind` method is the first one which is called when the Pod and `TaskRun` updates are observed. The `reconcile` method does most of the leg work when it comes to creating Pods or looking at the differences in the Pod and the `TaskRun`.
+
+How does a controller turn a `TaskRun` into a Pod? Inside the controller is a *reconciler* which implements a reconcile loop. It's job is to turn the YAML description and turn it into a k8 Pod. This is how it looks.
 
 ```plaintext
  |-> TaskRun reconciler gets notified of new TaskRun
