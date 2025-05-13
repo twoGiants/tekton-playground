@@ -10,15 +10,18 @@
 - e.g. Deployment, Pod, Service, Config Map
 
 ### Object Spec and Status
-- spec: the desired state, provided by you
-- status: current state, provided by the control plane
+
+- `spec`: the desired state, provided by you
+- `status`: current state, provided by the control plane
 
 ### Validation
+
 ```sh
 kubectl --validate
 ```
 
 ### Important Links
+
 - Official [docs](https://kubernetes.io/docs/concepts/overview/working-with-objects/).
 - Required fields, see [Kubernetes API reference](https://kubernetes.io/docs/reference/kubernetes-api/).
 
@@ -26,7 +29,7 @@ kubectl --validate
 
 ### CRDs
 
-Tekton objects like Tasks, TaskRuns, etc. are implemented as CRDs and defined [here](https://github.com/tektoncd/pipeline/tree/main/config) with the schemas in Go [here](https://github.com/tektoncd/pipeline/tree/main/pkg/apis/pipeline/v1).
+Tekton objects like `Tasks`, `TaskRuns`, etc. are implemented as CRDs and defined [here](https://github.com/tektoncd/pipeline/tree/main/config) with the schemas in Go [here](https://github.com/tektoncd/pipeline/tree/main/pkg/apis/pipeline/v1).
 
 [CRD Tutorial](https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/).
 
@@ -34,11 +37,11 @@ Tekton objects like Tasks, TaskRuns, etc. are implemented as CRDs and defined [h
 
 > **Reconciling**: a [custom controller](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#custom-controllers) changes the clusters state based on an instance of a CRD.
 
-*Reconcilers* change the cluster based on the desired behavior in an object's "spec", and update the object's "status" to reflect what happened.
+*Reconcilers* change the cluster based on the desired behavior in an object's `spec`, and update the object's `status` to reflect what happened.
 
-Not all Tekton CRDs use controllers. There is no *reconciler* for Tasks, you need to use a TaskRun which is executed by a TaskRun *reconciler*.
+Not all Tekton CRDs use controllers. There is no *reconciler* for `Tasks`, you need to use a `TaskRun` which is executed by a `TaskRun` *reconciler*.
 
-TaskRun *reconciler* is [here](https://github.com/tektoncd/pipeline/blob/main/pkg/reconciler/taskrun/taskrun.go) and PipelineRun [here](https://github.com/tektoncd/pipeline/blob/main/pkg/reconciler/pipelinerun/pipelinerun.go).
+`TaskRun` *reconciler* is [here](https://github.com/tektoncd/pipeline/blob/main/pkg/reconciler/taskrun/taskrun.go) and PipelineRun [here](https://github.com/tektoncd/pipeline/blob/main/pkg/reconciler/pipelinerun/pipelinerun.go).
 
 Build a controller using Kubebuilder [tutorial](https://book.kubebuilder.io/introduction.html) (Tekton uses Knative).
 
@@ -58,25 +61,26 @@ Tekton CRDs use validating and some mutating admission webhooks.
 
 - each step is a kubernetes container
 - `script` field is not available => tekton extend kubernetes containers
-- TaskRun creates a pod and runs each step as a container in that pod
-- get the pod name which the TaskRun created
+- `TaskRun` creates a pod and runs each step as a container in that pod
+- get the pod name which the `TaskRun` created
 
 ```sh
 kubectl get -o yaml taskrun "<task-run-name>" | less
 ```
-- you can embed tasks in TaskRuns
+
+- you can embed `Tasks` in `TaskRuns`
 - k8 starts containers in a pod at once but tekton wants the step containers executed one after another -> realized through `entrypoint` logic
 
 ### TaskRun Controller
 
-How does a controller turn a TaskRun into a pod? Inside the controller is a reconciler which implements a reconcile loop. It's job is to turn the YAML description and turn it into a k8 pod. This is how it looks.
+How does a controller turn a `TaskRun` into a pod? Inside the controller is a reconciler which implements a reconcile loop. It's job is to turn the YAML description and turn it into a k8 pod. This is how it looks.
 
-```
- |-> TaskRun reconciler gets notified o new TaskRun
+```plaintext
+ |-> TaskRun reconciler gets notified of new TaskRun
  |              ↓
- |   Receives TaskRun data
+ |   Receives TaskRun data and looks up associated Task
  |              ↓
- |   Converts TaskRun to Pod
+ |   Converts Task and TaskRun to Pod yaml using their fields
  |              ↓
  |   Submits Pod to k8s
  |              ↓
@@ -87,7 +91,7 @@ How does a controller turn a TaskRun into a pod? Inside the controller is a reco
 
 Next is the loop when the reconciler gets notified when a pod already exists and it gets notified about its status.
 
-```
+```plaintext
  |-> TaskRun reconciler gets notified of Pod updates
  |              ↓
  |   Looks up Pod data
@@ -100,3 +104,5 @@ Next is the loop when the reconciler gets notified when a pod already exists and
  |              ↓
  |-- Events and status updates reported to k8s. K8s notifies TaskRun reconciler
 ```
+
+In the step *"Reconciles Pod state with TaskRun state"* the *reconciler* looks at the difference between the Pod state and the `TaskRun` state and  then updates the `TaskRun` state to reflect the Pod state.
