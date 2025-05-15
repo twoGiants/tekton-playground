@@ -48,7 +48,7 @@ type MemcachedReconciler struct {
 // +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
-// +kubebuilder:rbac:groups=core,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -83,6 +83,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
+	// Let's just set the status to Unknown when no status is available
 	if len(memcached.Status.Conditions) == 0 {
 		meta.SetStatusCondition(
 			&memcached.Status.Conditions,
@@ -101,7 +102,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		// Let's re-fetch the memcached CR after updating the status
 		// so that we have the latest state of the resource on the cluster and we will avoid
-		// raising the error "the object has been modified, please apply"
+		// raising the error "the object has been modified, please apply
 		// your changes to the latest version and try again" which would re-trigger the reconciliation
 		// if we try to update it again in the following operations
 		if err := r.Get(ctx, req.NamespacedName, memcached); err != nil {
@@ -120,7 +121,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		if err != nil {
 			log.Error(err, "Failed to define new Deployment resource for Memcached")
 
-			// The following implementation will update
+			// The following implementation will update the status
 			meta.SetStatusCondition(
 				&memcached.Status.Conditions,
 				metav1.Condition{
