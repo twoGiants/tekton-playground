@@ -14,10 +14,10 @@ Deploy or teardown pipelines, tasks and triggers.
 
 ## Test Tasks
 
-Run the hello world task.
+Run the hello world task from the `getting-started` directory.
 
 ```sh
-kubectl create -f getting-started/runs/hello-world-run.yaml
+kubectl create -f runs/hello-world-run.yaml
 ```
 
 Check its logs.
