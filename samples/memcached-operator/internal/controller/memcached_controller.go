@@ -18,11 +18,17 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -89,6 +95,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		)
 		if err = r.Status().Update(ctx, memcached); err != nil {
 			log.Error(err, "Failed to update Memcached status")
+			// requeue
 			return ctrl.Result{}, err
 		}
 
@@ -99,11 +106,123 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// if we try to update it again in the following operations
 		if err := r.Get(ctx, req.NamespacedName, memcached); err != nil {
 			log.Error(err, "Failed to re-fetch memcached")
+			// requeue
 			return ctrl.Result{}, err
 		}
 	}
 
+	// Check if the deployment already exists, if not create a new one
+	found := &appsv1.Deployment{}
+	err = r.Get(ctx, types.NamespacedName{Name: memcached.Name, Namespace: memcached.Namespace}, found)
+	if err != nil && apierrors.IsNotFound(err) {
+		// Define a new deployment
+		dep, err := r.deploymentForMemcached(memcached)
+		if err != nil {
+			log.Error(err, "Failed to define new Deployment resource for Memcached")
+
+			// The following implementation will update
+			meta.SetStatusCondition(
+				&memcached.Status.Conditions,
+				metav1.Condition{
+					Type:    typeAvailableMemcached,
+					Status:  metav1.ConditionFalse,
+					Reason:  "Reconciling",
+					Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", memcached.Name, err),
+				},
+			)
+
+			if err := r.Status().Update(ctx, memcached); err != nil {
+				log.Error(err, "Failed to update Memcached status")
+				// requeue
+				return ctrl.Result{}, err
+			}
+
+			// requeue
+			return ctrl.Result{}, err
+		}
+
+		log.Info("Creating a new Deployment",
+			"Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+		if err = r.Create(ctx, dep); err != nil {
+			log.Error(err, "Failed to create new Deployment",
+				"Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+
+			// requeue
+			return ctrl.Result{}, err
+		}
+
+		// Deployment created successfully
+		// We will requeue the reconciliation so that we can ensure the state
+		// and move forward for the next operations
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get Deployment")
+		// Let's return the error for the reconciliation to be re-triggered again
+		return ctrl.Result{}, err
+	}
+
+	// stop
 	return ctrl.Result{}, nil
+}
+
+func (r *MemcachedReconciler) deploymentForMemcached(memcached *cachev1alpha1.Memcached) (*appsv1.Deployment, error) {
+	replicas := memcached.Spec.Size
+	image := "memcached:1.6.26-alpine3.19"
+
+	dep := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      memcached.Name,
+			Namespace: memcached.Namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"app.kubernetes.io/name": "project"},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app.kubernetes.io/name": "project"},
+				},
+				Spec: corev1.PodSpec{
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsNonRoot: ptr.To(true),
+						SeccompProfile: &corev1.SeccompProfile{
+							Type: corev1.SeccompProfileTypeRuntimeDefault,
+						},
+					},
+					Containers: []corev1.Container{{
+						Image:           image,
+						Name:            "memcached",
+						ImagePullPolicy: corev1.PullIfNotPresent,
+						// Ensure restrictive context for the container
+						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
+						SecurityContext: &corev1.SecurityContext{
+							RunAsNonRoot:             ptr.To(true),
+							RunAsUser:                ptr.To(int64(1001)),
+							AllowPrivilegeEscalation: ptr.To(false),
+							Capabilities: &corev1.Capabilities{
+								Drop: []corev1.Capability{
+									"ALL",
+								},
+							},
+						},
+						Ports: []corev1.ContainerPort{{
+							ContainerPort: 11211,
+							Name:          "memcached",
+						}},
+						Command: []string{"memcached", "--memory-limit=64", "-o", "modern", "-v"},
+					}},
+				},
+			},
+		},
+	}
+
+	// Set the ownerRef for the Deployment
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
+	if err := ctrl.SetControllerReference(memcached, dep, r.Scheme); err != nil {
+		return nil, err
+	}
+	return dep, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
