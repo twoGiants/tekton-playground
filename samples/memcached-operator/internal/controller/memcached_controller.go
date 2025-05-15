@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +27,8 @@ import (
 
 	cachev1alpha1 "example.com/m/v2/api/v1alpha1"
 )
+
+const typeAvailableMemcached = "Available"
 
 // MemcachedReconciler reconciles a Memcached object
 type MemcachedReconciler struct {
@@ -36,6 +39,9 @@ type MemcachedReconciler struct {
 // +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds/finalizers,verbs=update
+// +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
+// +kubebuilder:rbac:groups=core,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -47,9 +53,29 @@ type MemcachedReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.4/pkg/reconcile
 func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = logf.FromContext(ctx)
+	log := logf.FromContext(ctx)
 
-	// TODO(user): your logic here
+	// Fetch the Memcached instance (CR; remember a CR is like an instance of a CRD)
+	// The purpose is to check if the Custom Resource for the Kind Memcached
+	// is applied on the cluster. If not we return nil to stop the reconciliation.
+	memcached := &cachev1alpha1.Memcached{}
+	err := r.Get(ctx, req.NamespacedName, memcached)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// If the CR is not found then it usually means that it was deleted or not created.
+			// In this way, we will stop the reconciliation.
+			log.Info("memcached resource not found. Ignoring since object must be deleted")
+			// stop
+			return ctrl.Result{}, nil
+		}
+
+		// Error reading the object - requeue the request.
+		log.Error(err, "Failed to get memcached")
+		// requeue
+		return ctrl.Result{}, err
+	}
+
+	}
 
 	return ctrl.Result{}, nil
 }
