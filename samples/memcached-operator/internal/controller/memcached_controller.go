@@ -20,6 +20,8 @@ import (
 	"context"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -75,6 +77,30 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
+	if len(memcached.Status.Conditions) == 0 {
+		meta.SetStatusCondition(
+			&memcached.Status.Conditions,
+			metav1.Condition{
+				Type:    typeAvailableMemcached,
+				Status:  metav1.ConditionUnknown,
+				Reason:  "Reconciling",
+				Message: "Starting reconciliation",
+			},
+		)
+		if err = r.Status().Update(ctx, memcached); err != nil {
+			log.Error(err, "Failed to update Memcached status")
+			return ctrl.Result{}, err
+		}
+
+		// Let's re-fetch the memcached CR after updating the status
+		// so that we have the latest state of the resource on the cluster and we will avoid
+		// raising the error "the object has been modified, please apply"
+		// your changes to the latest version and try again" which would re-trigger the reconciliation
+		// if we try to update it again in the following operations
+		if err := r.Get(ctx, req.NamespacedName, memcached); err != nil {
+			log.Error(err, "Failed to re-fetch memcached")
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil
