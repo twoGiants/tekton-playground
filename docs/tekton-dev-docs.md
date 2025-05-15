@@ -35,6 +35,8 @@ Tekton objects like `Tasks`, `TaskRuns`, etc. are implemented as CRDs and define
 
 ### Controllers
 
+In a simplified way, Kubernetes works by allowing us to declare the desired state of our system, and then its controllers continuously observe the cluster and take actions to ensure that the actual state matches the desired state.
+
 > **Reconciling**: a [custom controller](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#custom-controllers) changes the clusters state based on an instance of a CRD.
 
 *Reconcilers* change the cluster based on the desired behavior in an object's `spec`, and update the object's `status` to reflect what happened.
@@ -159,3 +161,7 @@ Next is the loop when the reconciler gets notified when a pod already exists and
 ```
 
 In the step *"Reconciles Pod state with TaskRun state"* the *reconciler* looks at the difference between the Pod state and the `TaskRun` state and  then updates the `TaskRun` state to reflect the Pod state.
+
+### Example
+
+An example implementation of a CRD with a controller and a *reconciler* using the [kubebuilder](https://book.kubebuilder.io/getting-started) framework can be found in this repository in[samples/memcached-operator](../samples/memcached-operator/README.md).
