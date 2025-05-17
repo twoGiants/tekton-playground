@@ -191,7 +191,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 					Type:    typeAvailableMemcached,
 					Status:  metav1.ConditionFalse,
 					Reason:  "Resizing",
-					Message: fmt.Sprintf("Failed to update the size of the custom resource (%s): (%s)", memcached.Name, err),
+					Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", memcached.Name, err),
 				},
 			)
 			if err := r.Status().Update(ctx, memcached); err != nil {
@@ -208,6 +208,22 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// so that we can ensure that we have the latest state of the resource before
 		// update. Also, it will help ensure the desired state on the cluster
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// The following implementation will update the status
+	meta.SetStatusCondition(
+		&memcached.Status.Conditions,
+		metav1.Condition{
+			Type:    typeAvailableMemcached,
+			Status:  metav1.ConditionTrue,
+			Reason:  "Reconciling",
+			Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", memcached.Name, size),
+		},
+	)
+	if err := r.Status().Update(ctx, memcached); err != nil {
+		log.Error(err, "Failed to update Memcached status")
+		// requeue
+		return ctrl.Result{}, err
 	}
 
 	// stop
