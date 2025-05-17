@@ -142,6 +142,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, err
 		}
 
+		// Create the deployment in the cluster
 		log.Info("Creating a new Deployment",
 			"Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 		if err = r.Create(ctx, dep); err != nil {
@@ -160,6 +161,53 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		log.Error(err, "Failed to get Deployment")
 		// Let's return the error for the reconciliation to be re-triggered again
 		return ctrl.Result{}, err
+	}
+
+	// The CRD API defines that the Memcached type have a MemcachedSpec.Size field
+	// to set the quantity of DEployment instances to the desired state on the cluster.
+	// Therefore, the following code will ensure the Deployment size is the same as defined
+	// via the Size spec of the Custom Resource which we are reconciling.
+	size := memcached.Spec.Size
+	if *found.Spec.Replicas != size {
+		found.Spec.Replicas = &size
+		if err = r.Update(ctx, found); err != nil {
+			log.Error(err, "Failed to update Deployment",
+				"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+
+			// Re-fetch the memcached Custom Resource before updating the status
+			// so that we have the latest state of the resource on the cluster and we will avoid
+			// raising the error "the object has been modified, please apply your changes to the
+			// latest version and try again" which would re-trigger the reconciliation
+			if err := r.Get(ctx, req.NamespacedName, memcached); err != nil {
+				log.Error(err, "Failed to re-fetch memcached")
+				// requeue
+				return ctrl.Result{}, err
+			}
+
+			// The following implementation will update the status
+			meta.SetStatusCondition(
+				&memcached.Status.Conditions,
+				metav1.Condition{
+					Type:    typeAvailableMemcached,
+					Status:  metav1.ConditionFalse,
+					Reason:  "Resizing",
+					Message: fmt.Sprintf("Failed to update the size of the custom resource (%s): (%s)", memcached.Name, err),
+				},
+			)
+			if err := r.Status().Update(ctx, memcached); err != nil {
+				log.Error(err, "Failed to update Memcached status")
+				// requeue
+				return ctrl.Result{}, err
+			}
+
+			// requeue
+			return ctrl.Result{}, err
+		}
+
+		// Now, that we update the size we want to requeue the reconciliation
+		// so that we can ensure that we have the latest state of the resource before
+		// update. Also, it will help ensure the desired state on the cluster
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// stop
