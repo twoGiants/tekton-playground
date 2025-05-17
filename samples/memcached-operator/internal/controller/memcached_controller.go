@@ -282,7 +282,9 @@ func (r *MemcachedReconciler) deploymentForMemcached(memcached *cachev1alpha1.Me
 		},
 	}
 
-	// Set the ownerRef for the Deployment
+	// Set the ownerRef for the Deployment. Important so that reconciliation is triggered when the
+	// Deployment of our Memcached Custom Resource is changed and when the Memcached Custom Resource
+	// is deleted all resources owned by it are also automatically deleted.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
 	if err := ctrl.SetControllerReference(memcached, dep, r.Scheme); err != nil {
 		return nil, err
@@ -291,9 +293,15 @@ func (r *MemcachedReconciler) deploymentForMemcached(memcached *cachev1alpha1.Me
 }
 
 // SetupWithManager sets up the controller with the Manager.
+// The deployment is also watched to ensure its desired state in the cluster.
 func (r *MemcachedReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		// Watch the Memcached Custom Resource and trigger reconciliation whenever it
+		// is created, updated, or deleted.
 		For(&cachev1alpha1.Memcached{}).
+		// Watch the Deployment managed by the Memcached controller. If any changes occur to the
+		// Deployment owned and managed by this controller, it will trigger reconciliation, ensuring
+		// that the cluster state aligns with the desired state.
 		Owns(&appsv1.Deployment{}).
 		Named("memcached").
 		Complete(r)
