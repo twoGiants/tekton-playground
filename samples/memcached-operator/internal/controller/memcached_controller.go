@@ -82,6 +82,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// requeue
 		return ctrl.Result{}, err
 	}
+	log.Info("memcached resource found")
 
 	// Let's just set the status to Unknown when no status is available
 	if len(memcached.Status.Conditions) == 0 {
@@ -110,6 +111,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			// requeue
 			return ctrl.Result{}, err
 		}
+		log.Info("no status available, set to Unknown")
 	}
 
 	// Check if the deployment already exists, if not create a new one
@@ -167,8 +169,12 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// to set the quantity of DEployment instances to the desired state on the cluster.
 	// Therefore, the following code will ensure the Deployment size is the same as defined
 	// via the Size spec of the Custom Resource which we are reconciling.
+	log.Info("reconciliating size",
+		"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 	size := memcached.Spec.Size
 	if *found.Spec.Replicas != size {
+		log.Info(fmt.Sprintf("found diverging size (%d), changing back to (%d)", *found.Spec.Replicas, size),
+			"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 		found.Spec.Replicas = &size
 		if err = r.Update(ctx, found); err != nil {
 			log.Error(err, "Failed to update Deployment",
@@ -208,6 +214,9 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// so that we can ensure that we have the latest state of the resource before
 		// update. Also, it will help ensure the desired state on the cluster
 		return ctrl.Result{Requeue: true}, nil
+	} else {
+		log.Info("all good, no drift in size found",
+			"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 	}
 
 	// The following implementation will update the status
