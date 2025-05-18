@@ -113,4 +113,28 @@ var _ = Describe("Memcached Controller", func() {
 			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
 		})
 	})
+
+	Context("When reconciling a non existing resource", func() {
+		It("should not found the resource and stop the reconciliation loop", func() {
+			ctx := context.Background()
+			typeNamespacedName := types.NamespacedName{
+				Name:      "test-resource",
+				Namespace: "default", // TODO(user):Modify as needed
+			}
+			controllerReconciler := &MemcachedReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			By("Reconcile the resource first time")
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			err = k8sClient.Get(ctx, typeNamespacedName, &cachev1alpha1.Memcached{})
+			Expect(err).To(HaveOccurred())
+			Expect(errors.IsNotFound(err)).To(BeTrue())
+		})
+	})
 })
