@@ -31,6 +31,7 @@ import (
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	cachev1alpha1 "example.com/m/v2/api/v1alpha1"
@@ -41,7 +42,8 @@ const typeAvailableMemcached = "Available"
 // MemcachedReconciler reconciles a Memcached object
 type MemcachedReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme                 *runtime.Scheme
+	SetControllerReference func(metav1.Object, metav1.Object, *runtime.Scheme, ...controllerutil.OwnerReferenceOption) error
 }
 
 // +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds,verbs=get;list;watch;create;update;patch;delete
@@ -295,7 +297,7 @@ func (r *MemcachedReconciler) deploymentForMemcached(memcached *cachev1alpha1.Me
 	// Deployment of our Memcached Custom Resource is changed and when the Memcached Custom Resource
 	// is deleted all resources owned by it are also automatically deleted.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
-	if err := ctrl.SetControllerReference(memcached, dep, r.Scheme); err != nil {
+	if err := r.SetControllerReference(memcached, dep, r.Scheme); err != nil {
 		return nil, err
 	}
 	return dep, nil
