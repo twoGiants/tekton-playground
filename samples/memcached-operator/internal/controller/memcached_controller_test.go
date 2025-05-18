@@ -52,6 +52,9 @@ var _ = Describe("Memcached Controller", func() {
 						Namespace: "default",
 					},
 					// TODO(user): Specify other spec details if needed.
+					Spec: cachev1alpha1.MemcachedSpec{
+						Size: 1,
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
@@ -66,19 +69,48 @@ var _ = Describe("Memcached Controller", func() {
 			By("Cleanup the specific resource instance Memcached")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
-		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
+
+		It("should set resource status to 'Unknown' during first reconciliation loop", func() {
 			controllerReconciler := &MemcachedReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
 
+			By("Reconcile the resource first time")
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+
+			updated := &cachev1alpha1.Memcached{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
+			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionUnknown))
+			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
+		})
+
+		It("should set resource status to 'True' during second reconciliation loop", func() {
+			controllerReconciler := &MemcachedReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			By("Reconcile the resource first time")
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Reconcile the resource second time")
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Status 'True' after second reconciliation loop")
+			updated := &cachev1alpha1.Memcached{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
+			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
+			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
 		})
 	})
 })
