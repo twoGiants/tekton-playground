@@ -72,8 +72,9 @@ var _ = Describe("Memcached Controller", func() {
 
 		It("should set resource status to 'Unknown' during first reconciliation loop", func() {
 			controllerReconciler := &MemcachedReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:                 k8sClient,
+				Scheme:                 k8sClient.Scheme(),
+				SetControllerReference: ctrl.SetControllerReference,
 			}
 
 			By("Reconcile the resource first time")
@@ -90,8 +91,9 @@ var _ = Describe("Memcached Controller", func() {
 
 		It("should set resource status to 'True' during second reconciliation loop", func() {
 			controllerReconciler := &MemcachedReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:                 k8sClient,
+				Scheme:                 k8sClient.Scheme(),
+				SetControllerReference: ctrl.SetControllerReference,
 			}
 
 			By("Reconcile the resource first time")
@@ -115,15 +117,16 @@ var _ = Describe("Memcached Controller", func() {
 	})
 
 	Context("When reconciling a non existing resource", func() {
-		It("should not found the resource and stop the reconciliation loop", func() {
+		It("should not find the resource and stop the reconciliation loop", func() {
 			ctx := context.Background()
 			typeNamespacedName := types.NamespacedName{
 				Name:      "test-resource",
-				Namespace: "default", // TODO(user):Modify as needed
+				Namespace: "default",
 			}
 			controllerReconciler := &MemcachedReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:                 k8sClient,
+				Scheme:                 k8sClient.Scheme(),
+				SetControllerReference: ctrl.SetControllerReference,
 			}
 
 			By("Reconcile the resource first time")
