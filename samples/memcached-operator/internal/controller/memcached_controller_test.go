@@ -90,11 +90,6 @@ var _ = Describe("Memcached Controller", func() {
 	Context("When reconciling a resource and setting controller reference fails", func() {
 		resourceName, ctx, typeNamespacedName, memcached := baseSetup()
 
-		errMsg := "Failed setting controller reference"
-		setControllerReferenceFake := func(_, _ metav1.Object, _ *runtime.Scheme, _ ...controllerutil.OwnerReferenceOption) error {
-			return errors.New(errMsg)
-		}
-
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind Memcached")
 			createMemcachedCR(resourceName, ctx, typeNamespacedName, memcached)
@@ -105,11 +100,7 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		It("should set resource status to 'False' when setting controller reference fails", func() {
-			controllerReconciler := &MemcachedReconciler{
-				Client:                 k8sClient,
-				Scheme:                 k8sClient.Scheme(),
-				SetControllerReference: setControllerReferenceFake,
-			}
+			controllerReconciler, errMsg := newReconcilerWithFailingSetter()
 
 			By("Reconcile the resource first time")
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -205,4 +196,14 @@ func newReconciler() *MemcachedReconciler {
 		Scheme:                 k8sClient.Scheme(),
 		SetControllerReference: ctrl.SetControllerReference,
 	}
+}
+
+func newReconcilerWithFailingSetter() (*MemcachedReconciler, string) {
+	r := newReconciler()
+	errMsg := "Failed setting controller reference"
+	r.SetControllerReference = func(_, _ metav1.Object, _ *runtime.Scheme, _ ...controllerutil.OwnerReferenceOption) error {
+		return errors.New(errMsg)
+	}
+
+	return r, errMsg
 }
