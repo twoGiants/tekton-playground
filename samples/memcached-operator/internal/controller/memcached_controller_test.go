@@ -52,11 +52,7 @@ var _ = Describe("Memcached Controller", func() {
 		It("should set resource status to 'Unknown' during first reconciliation loop", func() {
 			controllerReconciler := newReconciler()
 
-			By("Reconcile the resource first time")
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).NotTo(HaveOccurred())
+			_ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
 
 			updated := &cachev1alpha1.Memcached{}
 			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
@@ -67,17 +63,9 @@ var _ = Describe("Memcached Controller", func() {
 		It("should set resource status to 'True' during second reconciliation loop", func() {
 			controllerReconciler := newReconciler()
 
-			By("Reconcile the resource first time")
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Reconcile the resource second time")
-			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).NotTo(HaveOccurred())
+			By("Reconcile two times")
+			_ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			_ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
 
 			By("Status 'True' after second reconciliation loop")
 			updated := &cachev1alpha1.Memcached{}
@@ -102,11 +90,8 @@ var _ = Describe("Memcached Controller", func() {
 		It("should set resource status to 'False' when setting controller reference fails", func() {
 			controllerReconciler, errMsg := newReconcilerWithFailingSetter()
 
-			By("Reconcile the resource first time")
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).To(HaveOccurred())
+			By("Reconcile with error")
+			err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
 			Expect(err.Error()).To(Equal(errMsg))
 
 			By("Status 'False' after first reconciliation loop")
@@ -120,16 +105,11 @@ var _ = Describe("Memcached Controller", func() {
 	Context("When reconciling a non existing Memcached resource", func() {
 		It("should not find the resource and stop the reconciliation loop", func() {
 			_, ctx, typeNamespacedName, _ := baseSetup()
-
 			controllerReconciler := newReconciler()
 
-			By("Reconcile the resource first time")
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).NotTo(HaveOccurred())
+			_ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
 
-			err = k8sClient.Get(ctx, typeNamespacedName, &cachev1alpha1.Memcached{})
+			err := k8sClient.Get(ctx, typeNamespacedName, &cachev1alpha1.Memcached{})
 			Expect(err).To(HaveOccurred())
 			Expect(apierrors.IsNotFound(err)).To(BeTrue())
 		})
@@ -206,4 +186,18 @@ func newReconcilerWithFailingSetter() (*MemcachedReconciler, string) {
 	}
 
 	return r, errMsg
+}
+
+func reconcileOnce(c context.Context, r *MemcachedReconciler, t types.NamespacedName, expectFail bool) error {
+	_, err := r.Reconcile(c, reconcile.Request{
+		NamespacedName: t,
+	})
+
+	if expectFail {
+		Expect(err).To(HaveOccurred())
+	} else {
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	return err
 }
