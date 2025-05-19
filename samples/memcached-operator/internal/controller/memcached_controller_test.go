@@ -42,20 +42,7 @@ var _ = Describe("Memcached Controller", func() {
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind Memcached")
-			err := k8sClient.Get(ctx, typeNamespacedName, memcached)
-			if err != nil && apierrors.IsNotFound(err) {
-				resource := &cachev1alpha1.Memcached{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
-					Spec: cachev1alpha1.MemcachedSpec{
-						Size: 1,
-					},
-				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
-			}
+			createMemcachedCR(resourceName, ctx, typeNamespacedName, memcached)
 		})
 
 		AfterEach(func() {
@@ -131,19 +118,7 @@ var _ = Describe("Memcached Controller", func() {
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind Memcached")
-			err := k8sClient.Get(ctx, typeNamespacedName, memcached)
-			if err != nil && apierrors.IsNotFound(err) {
-				resource := &cachev1alpha1.Memcached{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					Spec: cachev1alpha1.MemcachedSpec{
-						Size: 1,
-					},
-				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
-			}
+			createMemcachedCR(resourceName, ctx, typeNamespacedName, memcached)
 		})
 
 		AfterEach(func() {
@@ -210,4 +185,26 @@ func baseSetup() (string, context.Context, types.NamespacedName, *cachev1alpha1.
 	memcached := &cachev1alpha1.Memcached{}
 
 	return resourceName, ctx, typeNamespacedName, memcached
+}
+
+func createMemcachedCR(
+	resourceName string,
+	ctx context.Context,
+	typeNamespacedName types.NamespacedName,
+	memcached *cachev1alpha1.Memcached,
+) {
+	err := k8sClient.Get(ctx, typeNamespacedName, memcached)
+	if err != nil && apierrors.IsNotFound(err) {
+		resource := &cachev1alpha1.Memcached{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resourceName,
+				Namespace: "default",
+			},
+			// TODO(user): Specify other spec details if needed.
+			Spec: cachev1alpha1.MemcachedSpec{
+				Size: 1,
+			},
+		}
+		Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+	}
 }
