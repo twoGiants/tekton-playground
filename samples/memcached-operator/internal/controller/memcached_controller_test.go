@@ -46,20 +46,7 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		AfterEach(func() {
-			resource := &cachev1alpha1.Memcached{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance Memcached")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-
-			// INFO: apparently the deployment is not cleaned up in the test cluster when removing
-			// the Memcached resource so you need to do it manually or other tests won't work
-			dep := &appsv1.Deployment{}
-			err = k8sClient.Get(ctx, typeNamespacedName, dep)
-			Expect(err).NotTo(HaveOccurred())
-			By("Cleanup the  Memcached deployment")
-			Expect(k8sClient.Delete(ctx, dep)).To(Succeed())
+			cleanUp(typeNamespacedName, true)
 		})
 
 		It("should set resource status to 'Unknown' during first reconciliation loop", func() {
@@ -122,12 +109,7 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		AfterEach(func() {
-			resource := &cachev1alpha1.Memcached{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance Memcached")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			cleanUp(typeNamespacedName, false)
 		})
 
 		It("should set resource status to 'False' when setting controller reference fails", func() {
@@ -207,4 +189,24 @@ func createMemcachedCR(
 		}
 		Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 	}
+}
+
+func cleanUp(typeNamespacedName types.NamespacedName, withDeployment bool) {
+	resource := &cachev1alpha1.Memcached{}
+	err := k8sClient.Get(ctx, typeNamespacedName, resource)
+	Expect(err).NotTo(HaveOccurred())
+
+	By("Cleanup the specific resource instance Memcached")
+	Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+
+	if !withDeployment {
+		return
+	}
+	// INFO: apparently the deployment is not cleaned up in the test cluster when removing
+	// the Memcached resource so you need to do it manually or other tests won't work
+	dep := &appsv1.Deployment{}
+	err = k8sClient.Get(ctx, typeNamespacedName, dep)
+	Expect(err).NotTo(HaveOccurred())
+	By("Cleanup the  Memcached deployment")
+	Expect(k8sClient.Delete(ctx, dep)).To(Succeed())
 }
