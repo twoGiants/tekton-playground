@@ -38,13 +38,7 @@ import (
 
 var _ = Describe("Memcached Controller", func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
-		ctx := context.Background()
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
-		}
-		memcached := &cachev1alpha1.Memcached{}
+		resourceName, ctx, typeNamespacedName, memcached := baseSetup()
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind Memcached")
@@ -65,7 +59,6 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
 			resource := &cachev1alpha1.Memcached{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
@@ -129,15 +122,7 @@ var _ = Describe("Memcached Controller", func() {
 	})
 
 	Context("When reconciling a resource and setting controller reference fails", func() {
-		const resourceName = "test-resource"
-
-		ctx := context.Background()
-
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
-		}
-		memcached := &cachev1alpha1.Memcached{}
+		resourceName, ctx, typeNamespacedName, memcached := baseSetup()
 
 		errMsg := "Failed setting controller reference"
 		setControllerReferenceFake := func(_, _ metav1.Object, _ *runtime.Scheme, _ ...controllerutil.OwnerReferenceOption) error {
@@ -194,11 +179,8 @@ var _ = Describe("Memcached Controller", func() {
 
 	Context("When reconciling a non existing resource", func() {
 		It("should not find the resource and stop the reconciliation loop", func() {
-			ctx := context.Background()
-			typeNamespacedName := types.NamespacedName{
-				Name:      "test-resource",
-				Namespace: "default",
-			}
+			_, ctx, typeNamespacedName, _ := baseSetup()
+
 			controllerReconciler := &MemcachedReconciler{
 				Client:                 k8sClient,
 				Scheme:                 k8sClient.Scheme(),
@@ -217,3 +199,15 @@ var _ = Describe("Memcached Controller", func() {
 		})
 	})
 })
+
+func baseSetup() (string, context.Context, types.NamespacedName, *cachev1alpha1.Memcached) {
+	const resourceName = "test-resource"
+	ctx := context.Background()
+	typeNamespacedName := types.NamespacedName{
+		Name:      resourceName,
+		Namespace: "default", // TODO(user):Modify as needed
+	}
+	memcached := &cachev1alpha1.Memcached{}
+
+	return resourceName, ctx, typeNamespacedName, memcached
+}
