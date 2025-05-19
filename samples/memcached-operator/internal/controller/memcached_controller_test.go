@@ -51,7 +51,7 @@ var _ = Describe("Memcached Controller", func() {
 		It("should set resource status to 'Unknown' during first reconciliation loop", func() {
 			controllerReconciler := newReconciler()
 
-			_ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
 
 			updated := &cachev1alpha1.Memcached{}
 			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
@@ -63,14 +63,48 @@ var _ = Describe("Memcached Controller", func() {
 			controllerReconciler := newReconciler()
 
 			By("Reconcile two times")
-			_ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
-			_ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
 
 			By("Status 'True' after second reconciliation loop")
 			updated := &cachev1alpha1.Memcached{}
 			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
 			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
 			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
+		})
+
+		It("should set resource size back to 1 if it was changed", func() {
+			var manuallyChangedSize int32 = 2
+			controllerReconciler := newReconciler()
+
+			By("Reconcile two times")
+			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+
+			By("Status 'True' after second reconciliation loop")
+			updated := &cachev1alpha1.Memcached{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
+			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
+			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
+
+			// get
+			dep := &appsv1.Deployment{}
+			err := k8sClient.Get(ctx, typeNamespacedName, dep)
+			Expect(err).NotTo(HaveOccurred())
+			// manually resize
+			dep.Spec.Replicas = &manuallyChangedSize
+			err = k8sClient.Update(ctx, dep)
+			Expect(err).NotTo(HaveOccurred())
+			// check if resized
+			dep = &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, typeNamespacedName, dep)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(*dep.Spec.Replicas).To(Equal(int32(2)))
+
+			By("Requeue after size was changed back to 1")
+			result, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Requeue).To(BeTrue())
 		})
 	})
 
@@ -89,7 +123,7 @@ var _ = Describe("Memcached Controller", func() {
 			controllerReconciler, errMsg := newReconcilerWithFailingSetter()
 
 			By("Reconcile with error")
-			err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
 			Expect(err.Error()).To(Equal(errMsg))
 
 			By("Status 'False' after first reconciliation loop")
@@ -105,7 +139,7 @@ var _ = Describe("Memcached Controller", func() {
 			_, ctx, typeNamespacedName, _ := baseSetup()
 			controllerReconciler := newReconciler()
 
-			_ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
 
 			err := k8sClient.Get(ctx, typeNamespacedName, &cachev1alpha1.Memcached{})
 			Expect(err).To(HaveOccurred())
@@ -186,8 +220,8 @@ func newReconcilerWithFailingSetter() (*MemcachedReconciler, string) {
 	return r, errMsg
 }
 
-func reconcileOnce(c context.Context, r *MemcachedReconciler, t types.NamespacedName, expectFail bool) error {
-	_, err := r.Reconcile(c, reconcile.Request{
+func reconcileOnce(c context.Context, r *MemcachedReconciler, t types.NamespacedName, expectFail bool) (ctrl.Result, error) {
+	result, err := r.Reconcile(c, reconcile.Request{
 		NamespacedName: t,
 	})
 
@@ -197,5 +231,5 @@ func reconcileOnce(c context.Context, r *MemcachedReconciler, t types.Namespaced
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	return err
+	return result, err
 }
