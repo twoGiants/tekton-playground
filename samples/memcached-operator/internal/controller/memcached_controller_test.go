@@ -41,7 +41,6 @@ var _ = Describe("Memcached Controller", func() {
 		resourceName, ctx, typeNamespacedName, memcached := baseSetup()
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind Memcached")
 			createMemcachedCR(resourceName, ctx, typeNamespacedName, memcached)
 		})
 
@@ -79,7 +78,6 @@ var _ = Describe("Memcached Controller", func() {
 		resourceName, ctx, typeNamespacedName, memcached := baseSetup()
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind Memcached")
 			createMemcachedCR(resourceName, ctx, typeNamespacedName, memcached)
 		})
 
