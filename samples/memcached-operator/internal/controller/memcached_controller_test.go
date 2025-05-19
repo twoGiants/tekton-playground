@@ -50,11 +50,7 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		It("should set resource status to 'Unknown' during first reconciliation loop", func() {
-			controllerReconciler := &MemcachedReconciler{
-				Client:                 k8sClient,
-				Scheme:                 k8sClient.Scheme(),
-				SetControllerReference: ctrl.SetControllerReference,
-			}
+			controllerReconciler := newReconciler()
 
 			By("Reconcile the resource first time")
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -69,11 +65,7 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		It("should set resource status to 'True' during second reconciliation loop", func() {
-			controllerReconciler := &MemcachedReconciler{
-				Client:                 k8sClient,
-				Scheme:                 k8sClient.Scheme(),
-				SetControllerReference: ctrl.SetControllerReference,
-			}
+			controllerReconciler := newReconciler()
 
 			By("Reconcile the resource first time")
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -134,15 +126,11 @@ var _ = Describe("Memcached Controller", func() {
 		})
 	})
 
-	Context("When reconciling a non existing resource", func() {
+	Context("When reconciling a non existing Memcached resource", func() {
 		It("should not find the resource and stop the reconciliation loop", func() {
 			_, ctx, typeNamespacedName, _ := baseSetup()
 
-			controllerReconciler := &MemcachedReconciler{
-				Client:                 k8sClient,
-				Scheme:                 k8sClient.Scheme(),
-				SetControllerReference: ctrl.SetControllerReference,
-			}
+			controllerReconciler := newReconciler()
 
 			By("Reconcile the resource first time")
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -209,4 +197,12 @@ func cleanUp(typeNamespacedName types.NamespacedName, withDeployment bool) {
 	Expect(err).NotTo(HaveOccurred())
 	By("Cleanup the  Memcached deployment")
 	Expect(k8sClient.Delete(ctx, dep)).To(Succeed())
+}
+
+func newReconciler() *MemcachedReconciler {
+	return &MemcachedReconciler{
+		Client:                 k8sClient,
+		Scheme:                 k8sClient.Scheme(),
+		SetControllerReference: ctrl.SetControllerReference,
+	}
 }
