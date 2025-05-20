@@ -75,14 +75,12 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			// If the CR is not found then it usually means that it was deleted or not created.
 			// In this way, we will stop the reconciliation.
 			log.Info("memcached resource not found. Ignoring since object must be deleted")
-			// stop
-			return ctrl.Result{}, nil
+			return stop()
 		}
 
 		// Error reading the object - requeue the request.
 		log.Error(err, "Failed to get memcached")
-		// requeue
-		return ctrl.Result{}, err
+		return requeueWith(err)
 	}
 	log.Info("memcached resource found")
 
@@ -110,8 +108,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// if we try to update it again in the following operations
 		if err := r.Get(ctx, req.NamespacedName, memcached); err != nil {
 			log.Error(err, "Failed to re-fetch memcached")
-			// requeue
-			return ctrl.Result{}, err
+			return requeueWith(err)
 		}
 		log.Info("no status available, set to Unknown")
 	}
@@ -138,12 +135,10 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 			if err := r.Status().Update(ctx, memcached); err != nil {
 				log.Error(err, "Failed to update Memcached status")
-				// requeue
-				return ctrl.Result{}, err
+				return requeueWith(err)
 			}
 
-			// requeue
-			return ctrl.Result{}, err
+			return requeueWith(err)
 		}
 
 		// Create the deployment in the cluster
@@ -153,18 +148,17 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			log.Error(err, "Failed to create new Deployment",
 				"Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 
-			// requeue
-			return ctrl.Result{}, err
+			return requeueWith(err)
 		}
 
 		// Deployment created successfully
 		// We will requeue the reconciliation so that we can ensure the state
 		// and move forward for the next operations
-		return ctrl.Result{RequeueAfter: time.Minute}, nil
+		return requeueAfterMinute()
 	} else if err != nil {
 		log.Error(err, "Failed to get Deployment")
 		// Let's return the error for the reconciliation to be re-triggered again
-		return ctrl.Result{}, err
+		return requeueWith(err)
 	}
 
 	// The CRD API defines that the Memcached type have a MemcachedSpec.Size field
@@ -188,8 +182,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			// latest version and try again" which would re-trigger the reconciliation
 			if err := r.Get(ctx, req.NamespacedName, memcached); err != nil {
 				log.Error(err, "Failed to re-fetch memcached")
-				// requeue
-				return ctrl.Result{}, err
+				return requeueWith(err)
 			}
 
 			// The following implementation will update the status
@@ -204,18 +197,16 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			)
 			if err := r.Status().Update(ctx, memcached); err != nil {
 				log.Error(err, "Failed to update Memcached status")
-				// requeue
-				return ctrl.Result{}, err
+				return requeueWith(err)
 			}
 
-			// requeue
-			return ctrl.Result{}, err
+			return requeueWith(err)
 		}
 
 		// Now, that we update the size we want to requeue the reconciliation
 		// so that we can ensure that we have the latest state of the resource before
 		// update. Also, it will help ensure the desired state on the cluster
-		return ctrl.Result{Requeue: true}, nil
+		return requeue()
 	} else {
 		log.Info("all good, no drift in size found",
 			"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
@@ -233,12 +224,10 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	)
 	if err := r.Status().Update(ctx, memcached); err != nil {
 		log.Error(err, "Failed to update Memcached status")
-		// requeue
-		return ctrl.Result{}, err
+		return requeueWith(err)
 	}
 
-	// stop
-	return ctrl.Result{}, nil
+	return stop()
 }
 
 func (r *MemcachedReconciler) deploymentForMemcached(memcached *cachev1alpha1.Memcached) (*appsv1.Deployment, error) {
@@ -316,4 +305,20 @@ func (r *MemcachedReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.Deployment{}).
 		Named("memcached").
 		Complete(r)
+}
+
+func stop() (ctrl.Result, error) {
+	return ctrl.Result{}, nil
+}
+
+func requeueWith(err error) (ctrl.Result, error) {
+	return ctrl.Result{}, err
+}
+
+func requeue() (ctrl.Result, error) {
+	return ctrl.Result{Requeue: true}, nil
+}
+
+func requeueAfterMinute() (ctrl.Result, error) {
+	return ctrl.Result{RequeueAfter: time.Minute}, nil
 }
