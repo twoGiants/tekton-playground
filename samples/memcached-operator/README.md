@@ -1,10 +1,8 @@
 # Memcached Operator
 
-// TODO(user): Add simple overview of use/purpose
+## Purpose
 
-## Description
-
-// TODO(user): An in-depth paragraph about your project and overview of use
+This a sample implementation of a Kubernetes controller with a reconciler using the Kubebuilder framework. Additional tests were implemented to have a 100% test coverage.
 
 ### Reconciliation Process
 
@@ -73,17 +71,23 @@ Return options:
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
 
+> **NOTE:** Use the `KinD` [cluster](/README.md#deploy-cluster) with a local [registry](/cluster/registry.md) from this repository to deploy the operator.
+
 ### To Deploy on the cluster
 
 **Build and push your image to the location specified by `IMG`:**
 
 ```sh
+# your setup
 make docker-build docker-push IMG=<some-registry>/memcached-operator:tag
+
+# KinD cluster setup from this repo
+make docker-build docker-push IMG=localhost:5000/controller:latest
 ```
 
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
+> **NOTE:** This image ought to be published in the personal registry you specified.
+> And it is required to have access to pull the image from the working environment.
+> Make sure you have the proper permission to the registry if the above commands don’t work.
 
 **Install the CRDs into the cluster:**
 
@@ -94,13 +98,35 @@ make install
 **Deploy the Manager to the cluster with the image specified by `IMG`:**
 
 ```sh
+# your setup
 make deploy IMG=<some-registry>/memcached-operator:tag
+
+# KinD cluster setup from this repo
+make deploy IMG=localhost:5000/controller:latest
 ```
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
+> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin privileges or be logged in as admin.
 
-**Create instances of your solution**
+**Check instance of operator is running in your cluster:**
+
+```sh
+kubectl get all -n memcached-operator-system
+
+NAME                                                         READY   STATUS    RESTARTS   AGE
+pod/memcached-operator-controller-manager-5c7d9c7f64-782bx   1/1     Running   0          24s
+
+NAME                                                            TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+service/memcached-operator-controller-manager-metrics-service   ClusterIP   10.96.21.156   <none>        8443/TCP   24s
+
+NAME                                                    READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/memcached-operator-controller-manager   1/1     1            1           24s
+
+NAME                                                               DESIRED   CURRENT   READY   AGE
+replicaset.apps/memcached-operator-controller-manager-5c7d9c7f64   1         1         1       24s
+```
+
+**Create instances of your solution:**
+
 You can apply the samples (examples) from the config/sample:
 
 ```sh
@@ -108,6 +134,25 @@ kubectl apply -k config/samples/
 ```
 
 >**NOTE**: Ensure that the samples has default values to test it out.
+
+**Follow the logs:**
+
+```sh
+kubectl logs -f -n memcached-operator-system memcached-operator-controller-manager-5c7d9c7f64-782bx
+```
+
+**Test the reconciler is working by manually changing the replicas:**
+
+```sh
+kubectl edit deploy memcached-sample
+```
+
+**Observe the log message of changing back the size:**
+
+```sh
+2025-05-20T09:11:08Z    INFO    found diverging size (4), changing back to (1)  {"controller": "memcached", "controllerGroup": "cache.example.com", "controllerKind": "Memcached", "Memcached": {"name":"memcached-sample","namespace":"default"}, "namespace": "default", "name": "memcached-sample", "reconcileID": "1c2d6d0b-70f0-4cc5-9a8a-8b7426e30d3c", "Deployment.Namespace": "default", "Deployment.Name": "memcached-sample"}
+
+```
 
 ### To Uninstall
 
@@ -173,11 +218,7 @@ can obtain this solution from there.
     previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
     is manually re-applied afterwards.
 
-## Contributing
-
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
+> **NOTE:** Run `make help` for more information on all potential `make` targets
 
 More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
 
