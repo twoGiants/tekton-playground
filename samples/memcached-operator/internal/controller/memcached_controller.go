@@ -97,7 +97,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// raising the error "the object has been modified, please apply
 		// your changes to the latest version and try again" which would re-trigger the reconciliation
 		// if we try to update it again in the following operations
-		if err := r.Get(ctx, req.NamespacedName, memcached); err != nil {
+		if err := r.K8Cli.Get(ctx, req.NamespacedName, memcached); err != nil {
 			log.Error(err, "Failed to re-fetch memcached")
 			return requeueWith(err)
 		}
