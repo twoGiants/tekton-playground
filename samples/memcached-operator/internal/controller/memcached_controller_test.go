@@ -141,9 +141,7 @@ var _ = Describe("Memcached Controller", func() {
 			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
 			Expect(err.Error()).To(Equal(expectedErrMsg))
 
-			By("No deployment was created")
-			err = k8sClient.Get(ctx, typeNamespacedName, &appsv1.Deployment{})
-			Expect(err).To(HaveOccurred())
+			expectNoDeployment(typeNamespacedName)
 		})
 
 		It("should requeue with error if k8 client fails to update memcached resource status", func() {
@@ -153,9 +151,7 @@ var _ = Describe("Memcached Controller", func() {
 			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
 			Expect(err.Error()).To(Equal(expectedErrMsg))
 
-			By("No deployment was created")
-			err = k8sClient.Get(ctx, typeNamespacedName, &appsv1.Deployment{})
-			Expect(err).To(HaveOccurred())
+			expectNoDeployment(typeNamespacedName)
 		})
 
 		It("should requeue with error if k8 client fails to get the memcached resource after status update", func() {
@@ -165,9 +161,7 @@ var _ = Describe("Memcached Controller", func() {
 			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
 			Expect(err.Error()).To(Equal(expectedErrMsg))
 
-			By("No deployment was created")
-			err = k8sClient.Get(ctx, typeNamespacedName, &appsv1.Deployment{})
-			Expect(err).To(HaveOccurred())
+			expectNoDeployment(typeNamespacedName)
 		})
 	})
 
@@ -279,4 +273,10 @@ func reconcileOnce(c context.Context, r *MemcachedReconciler, t types.Namespaced
 	}
 
 	return result, err
+}
+
+func expectNoDeployment(t types.NamespacedName) {
+	By("No deployment was created")
+	err := k8sClient.Get(ctx, t, &appsv1.Deployment{})
+	Expect(err).To(HaveOccurred())
 }
