@@ -148,6 +148,21 @@ var _ = Describe("Memcached Controller", func() {
 			err = k8sClient.Get(ctx, typeNamespacedName, &appsv1.Deployment{})
 			Expect(err).To(HaveOccurred())
 		})
+
+		It("should requeue with error if k8 client fails to update memcached resource status", func() {
+			errMap := make(map[string][]error)
+			statusUpdateErr := errors.New("error updating resource status")
+			errMap["StatusUpdate"] = []error{statusUpdateErr}
+
+			controllerReconciler := newReconcilerWithK8CliStub(errMap)
+
+			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			Expect(err).To(MatchError(statusUpdateErr))
+
+			By("No deployment was created")
+			err = k8sClient.Get(ctx, typeNamespacedName, &appsv1.Deployment{})
+			Expect(err).To(HaveOccurred())
+		})
 	})
 
 	Context("When reconciling a non existing Memcached resource", func() {
