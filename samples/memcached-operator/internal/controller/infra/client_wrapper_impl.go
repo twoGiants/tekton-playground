@@ -45,9 +45,14 @@ func (c *ClientWrapperStub) Get(_ context.Context, _ types.NamespacedName, _ cli
 }
 
 func (c *ClientWrapperStub) pickErrFor(name string) error {
+	if c.errArr == nil {
+		return nil
+	}
+
 	if _, ok := c.errArr[name]; ok {
 		return c.nextErr(name)
 	}
+
 	return nil
 }
 
