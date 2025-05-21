@@ -108,7 +108,7 @@ var _ = Describe("Memcached Controller", func() {
 		})
 	})
 
-	Context("When reconciling a resource and setting controller reference fails", func() {
+	Context("When reconciling a resource and setting controller reference for deployment fails", func() {
 		resourceName, ctx, typeNamespacedName, memcached := baseSetup()
 
 		BeforeEach(func() {
