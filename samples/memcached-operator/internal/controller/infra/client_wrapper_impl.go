@@ -2,6 +2,7 @@ package infra
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,41 +33,43 @@ func (c *ClientWrapperImpl) Update(ctx context.Context, co client.Object) error 
 }
 
 type ClientWrapperStub struct {
-	errors map[string]error
+	errArr map[string][]error
 }
 
-func NewClientWrapperStub(e map[string]error) *ClientWrapperStub {
+func NewClientWrapperStub(e map[string][]error) *ClientWrapperStub {
 	return &ClientWrapperStub{e}
 }
 
 func (c *ClientWrapperStub) Get(_ context.Context, _ types.NamespacedName, _ client.Object) error {
-	if err, ok := c.errors["Get"]; ok {
-		return err
+	return c.pickErrFor("Get")
+}
+
+func (c *ClientWrapperStub) pickErrFor(name string) error {
+	if _, ok := c.errArr[name]; ok {
+		return c.nextErr(name)
+	}
+	return nil
+}
+
+func (c *ClientWrapperStub) nextErr(name string) error {
+	if len(c.errArr[name]) == 0 {
+		panic(fmt.Sprintf("no more errors configured in nulled '%s' method\n", name))
 	}
 
-	return nil
+	err := c.errArr[name][0]
+	c.errArr[name] = c.errArr[name][1:]
+
+	return err
 }
 
 func (c *ClientWrapperStub) StatusUpdate(_ context.Context, _ client.Object) error {
-	if err, ok := c.errors["StatusUpdate"]; ok {
-		return err
-	}
-
-	return nil
+	return c.pickErrFor("StatusUpdate")
 }
 
 func (c *ClientWrapperStub) Create(_ context.Context, _ client.Object) error {
-	if err, ok := c.errors["Create"]; ok {
-		return err
-	}
-
-	return nil
+	return c.pickErrFor("Create")
 }
 
 func (c *ClientWrapperStub) Update(ctx context.Context, _ client.Object) error {
-	if err, ok := c.errors["Update"]; ok {
-		return err
-	}
-
-	return nil
+	return c.pickErrFor("Update")
 }

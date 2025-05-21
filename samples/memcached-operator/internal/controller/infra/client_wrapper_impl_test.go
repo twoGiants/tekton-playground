@@ -33,9 +33,9 @@ func Test_ClientWrapper_ErrorResponses(t *testing.T) {
 		},
 	}
 
-	responses := make(map[string]error)
+	responses := make(map[string][]error)
 	for _, tc := range testCases {
-		responses[tc.operation] = tc.expectedErr
+		responses[tc.operation] = []error{tc.expectedErr}
 	}
 
 	ctx := context.Background()
@@ -61,7 +61,7 @@ func Test_ClientWrapper_ErrorResponses(t *testing.T) {
 
 func Test_ClientWrapper_NilResponses(t *testing.T) {
 	ctx := context.Background()
-	responses := make(map[string]error)
+	responses := make(map[string][]error)
 
 	k8ClientStub := infra.NewClientWrapperStub(responses)
 
