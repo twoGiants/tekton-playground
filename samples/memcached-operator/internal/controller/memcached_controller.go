@@ -87,19 +87,9 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Let's just set the status to Unknown when no status is available
 	if len(memcached.Status.Conditions) == 0 {
-		meta.SetStatusCondition(
-			&memcached.Status.Conditions,
-			metav1.Condition{
-				Type:    typeAvailableMemcached,
-				Status:  metav1.ConditionUnknown,
-				Reason:  "Reconciling",
-				Message: "Starting reconciliation",
-			},
-		)
-		if err = r.Status().Update(ctx, memcached); err != nil {
-			log.Error(err, "Failed to update Memcached status")
-			// requeue
-			return ctrl.Result{}, err
+		if err = r.updateStatus(ctx, memcached,
+			metav1.ConditionUnknown, "Starting reconciliation"); err != nil {
+			return requeueWith(err)
 		}
 
 		// Let's re-fetch the memcached CR after updating the status
@@ -133,7 +123,6 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 					Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", memcached.Name, err),
 				},
 			)
-
 			if err := r.Status().Update(ctx, memcached); err != nil {
 				log.Error(err, "Failed to update Memcached status")
 				return requeueWith(err)
@@ -229,6 +218,31 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	return stop()
+}
+
+func (r *MemcachedReconciler) updateStatus(
+	ctx context.Context,
+	memcached *cachev1alpha1.Memcached,
+	status metav1.ConditionStatus,
+	message string,
+) error {
+	log := logf.FromContext(ctx)
+
+	meta.SetStatusCondition(
+		&memcached.Status.Conditions,
+		metav1.Condition{
+			Type:    typeAvailableMemcached,
+			Status:  status,
+			Reason:  "Reconciling",
+			Message: message,
+		},
+	)
+	if err := r.K8Cli.StatusUpdate(ctx, memcached); err != nil {
+		log.Error(err, "Failed to update Memcached status")
+		return err
+	}
+
+	return nil
 }
 
 func (r *MemcachedReconciler) deploymentForMemcached(memcached *cachev1alpha1.Memcached) (*appsv1.Deployment, error) {
