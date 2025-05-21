@@ -44,6 +44,7 @@ type MemcachedReconciler struct {
 	client.Client
 	Scheme                 *runtime.Scheme
 	SetControllerReference func(metav1.Object, metav1.Object, *runtime.Scheme, ...controllerutil.OwnerReferenceOption) error
+	K8Cli                  K8CliWrapper
 }
 
 // +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds,verbs=get;list;watch;create;update;patch;delete
@@ -69,7 +70,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// The purpose is to check if the Custom Resource for the Kind Memcached
 	// is applied on the cluster. If not we return nil to stop the reconciliation.
 	memcached := &cachev1alpha1.Memcached{}
-	err := r.Get(ctx, req.NamespacedName, memcached)
+	err := r.K8Cli.Get(ctx, req.NamespacedName, memcached)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// If the CR is not found then it usually means that it was deleted or not created.
@@ -165,7 +166,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// to set the quantity of DEployment instances to the desired state on the cluster.
 	// Therefore, the following code will ensure the Deployment size is the same as defined
 	// via the Size spec of the Custom Resource which we are reconciling.
-	log.Info("reconciliating size",
+	log.Info("reconciling size",
 		"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 	size := memcached.Spec.Size
 	if *found.Spec.Replicas != size {
