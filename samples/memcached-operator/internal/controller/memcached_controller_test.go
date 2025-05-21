@@ -34,6 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cachev1alpha1 "example.com/m/v2/api/v1alpha1"
+	"example.com/m/v2/internal/controller/infra"
 )
 
 var _ = Describe("Memcached Controller", func() {
@@ -74,7 +75,6 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		It("should set resource size back to 1 if it was changed", func() {
-			var manuallyChangedSize int32 = 2
 			controllerReconciler := newReconciler()
 
 			By("Reconcile two times")
@@ -92,6 +92,7 @@ var _ = Describe("Memcached Controller", func() {
 			err := k8sClient.Get(ctx, typeNamespacedName, dep)
 			Expect(err).NotTo(HaveOccurred())
 			// manually resize
+			var manuallyChangedSize int32 = 2
 			dep.Spec.Replicas = &manuallyChangedSize
 			err = k8sClient.Update(ctx, dep)
 			Expect(err).NotTo(HaveOccurred())
@@ -131,6 +132,21 @@ var _ = Describe("Memcached Controller", func() {
 			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
 			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
 			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
+		})
+
+		It("should requeue with error if k8 client fails to get the resource although it exists", func() {
+			errMap := make(map[string][]error)
+			getErr := errors.New("error reading the object")
+			errMap["Get"] = []error{getErr}
+
+			controllerReconciler := newReconcilerWithK8CliStub(errMap)
+
+			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			Expect(err).To(MatchError(getErr))
+
+			By("No deployment was created")
+			err = k8sClient.Get(ctx, typeNamespacedName, &appsv1.Deployment{})
+			Expect(err).To(HaveOccurred())
 		})
 	})
 
@@ -207,6 +223,16 @@ func newReconciler() *MemcachedReconciler {
 		Client:                 k8sClient,
 		Scheme:                 k8sClient.Scheme(),
 		SetControllerReference: ctrl.SetControllerReference,
+		K8Cli:                  infra.NewClientWrapper(k8sClient),
+	}
+}
+
+func newReconcilerWithK8CliStub(errMap map[string][]error) *MemcachedReconciler {
+	return &MemcachedReconciler{
+		Client:                 k8sClient,
+		Scheme:                 k8sClient.Scheme(),
+		SetControllerReference: ctrl.SetControllerReference,
+		K8Cli:                  infra.NewClientWrapperStub(errMap),
 	}
 }
 
