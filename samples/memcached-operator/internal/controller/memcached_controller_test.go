@@ -135,14 +135,11 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		It("should requeue with error if k8 client fails to get the resource although it exists", func() {
-			errMap := make(map[string][]error)
-			getErr := errors.New("error reading the object")
-			errMap["Get"] = []error{getErr}
-
-			controllerReconciler := newReconcilerWithK8CliStub(errMap)
+			expectedErrMsg := "error reading the object"
+			controllerReconciler := newReconcilerWithK8CliStub("Get", []string{expectedErrMsg})
 
 			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
-			Expect(err).To(MatchError(getErr))
+			Expect(err.Error()).To(Equal(expectedErrMsg))
 
 			By("No deployment was created")
 			err = k8sClient.Get(ctx, typeNamespacedName, &appsv1.Deployment{})
@@ -150,14 +147,11 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		It("should requeue with error if k8 client fails to update memcached resource status", func() {
-			errMap := make(map[string][]error)
-			statusUpdateErr := errors.New("error updating resource status")
-			errMap["StatusUpdate"] = []error{statusUpdateErr}
-
-			controllerReconciler := newReconcilerWithK8CliStub(errMap)
+			expectedErrMsg := "error updating resource status"
+			controllerReconciler := newReconcilerWithK8CliStub("StatusUpdate", []string{expectedErrMsg})
 
 			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
-			Expect(err).To(MatchError(statusUpdateErr))
+			Expect(err.Error()).To(Equal(expectedErrMsg))
 
 			By("No deployment was created")
 			err = k8sClient.Get(ctx, typeNamespacedName, &appsv1.Deployment{})
@@ -165,14 +159,11 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		It("should requeue with error if k8 client fails to get the memcached resource after status update", func() {
-			errMap := make(map[string][]error)
-			getErr := errors.New("error reading the object")
-			errMap["Get"] = []error{nil, getErr}
-
-			controllerReconciler := newReconcilerWithK8CliStub(errMap)
+			expectedErrMsg := "error reading the object"
+			controllerReconciler := newReconcilerWithK8CliStub("Get", []string{"", expectedErrMsg})
 
 			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
-			Expect(err).To(MatchError(getErr))
+			Expect(err.Error()).To(Equal(expectedErrMsg))
 
 			By("No deployment was created")
 			err = k8sClient.Get(ctx, typeNamespacedName, &appsv1.Deployment{})
@@ -257,12 +248,12 @@ func newReconciler() *MemcachedReconciler {
 	}
 }
 
-func newReconcilerWithK8CliStub(errMap map[string][]error) *MemcachedReconciler {
+func newReconcilerWithK8CliStub(name string, errMessages []string) *MemcachedReconciler {
 	return &MemcachedReconciler{
 		Client:                 k8sClient,
 		Scheme:                 k8sClient.Scheme(),
 		SetControllerReference: ctrl.SetControllerReference,
-		K8Cli:                  infra.NewClientWrapperStub(errMap),
+		K8Cli:                  infra.ClientWrapperStubFactory(name, errMessages),
 	}
 }
 
