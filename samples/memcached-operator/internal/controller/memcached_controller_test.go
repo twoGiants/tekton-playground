@@ -136,7 +136,8 @@ var _ = Describe("Memcached Controller", func() {
 
 		It("should requeue with error if k8 client fails to get the resource although it exists", func() {
 			expectedErrMsg := "error reading the object"
-			controllerReconciler := newReconcilerWithK8CliStub("Get", []string{expectedErrMsg})
+			errMap := infra.StubErrors{"Get": []error{errors.New(expectedErrMsg)}}
+			controllerReconciler := newReconcilerWithK8CliStub(errMap)
 
 			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
 			Expect(err.Error()).To(Equal(expectedErrMsg))
@@ -145,11 +146,12 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		It("should requeue with error if k8 client fails to update memcached resource status", func() {
-			expectedErrMsg := "error updating resource status"
-			controllerReconciler := newReconcilerWithK8CliStub("StatusUpdate", []string{expectedErrMsg})
+			expectedErr := errors.New("error updating resource status")
+			errMap := infra.StubErrors{"StatusUpdate": {expectedErr}}
+			controllerReconciler := newReconcilerWithK8CliStub(errMap)
 
 			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
-			Expect(err.Error()).To(Equal(expectedErrMsg))
+			Expect(err).To(MatchError(expectedErr))
 
 			expectNoDeployment(typeNamespacedName)
 		})
@@ -242,12 +244,12 @@ func newReconciler() *MemcachedReconciler {
 	}
 }
 
-func newReconcilerWithK8CliStub(name string, errMessages []string) *MemcachedReconciler {
+func newReconcilerWithK8CliStub(errMap infra.StubErrors) *MemcachedReconciler {
 	return &MemcachedReconciler{
 		Client:                 k8sClient,
 		Scheme:                 k8sClient.Scheme(),
 		SetControllerReference: ctrl.SetControllerReference,
-		K8Cli:                  infra.ClientWrapperStubFactory(name, errMessages),
+		K8Cli:                  infra.NewClientWrapperStub(errMap),
 	}
 }
 

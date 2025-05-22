@@ -26,7 +26,7 @@ func (c *ClientWrapperImpl) StatusUpdate(ctx context.Context, co client.Object) 
 }
 
 func (c *ClientWrapperImpl) Create(ctx context.Context, co client.Object) error {
-	return c.k8Client.Update(ctx, co)
+	return c.k8Client.Create(ctx, co)
 }
 
 func (c *ClientWrapperImpl) Update(ctx context.Context, co client.Object) error {
