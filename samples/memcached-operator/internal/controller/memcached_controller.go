@@ -70,8 +70,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// The purpose is to check if the Custom Resource for the Kind Memcached
 	// is applied on the cluster. If not we return nil to stop the reconciliation.
 	memcached := &cachev1alpha1.Memcached{}
-	err := r.K8Cli.Get(ctx, req.NamespacedName, memcached)
-	if err != nil {
+	if err := r.K8Cli.Get(ctx, req.NamespacedName, memcached); err != nil {
 		if apierrors.IsNotFound(err) {
 			// If the CR is not found then it usually means that it was deleted or not created.
 			// In this way, we will stop the reconciliation.
@@ -87,7 +86,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Let's just set the status to Unknown when no status is available
 	if len(memcached.Status.Conditions) == 0 {
-		if err = r.updateStatus(ctx, memcached,
+		if err := r.updateStatus(ctx, memcached,
 			metav1.ConditionUnknown, "Starting reconciliation"); err != nil {
 			return requeueWith(err)
 		}
@@ -106,7 +105,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Check if the deployment already exists, if not create a new one
 	found := &appsv1.Deployment{}
-	err = r.Get(ctx, types.NamespacedName{Name: memcached.Name, Namespace: memcached.Namespace}, found)
+	err := r.K8Cli.Get(ctx, types.NamespacedName{Name: memcached.Name, Namespace: memcached.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
 		// Define a new deployment
 		dep, err := r.deploymentForMemcached(memcached)
@@ -127,7 +126,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// Create the deployment in the cluster
 		log.Info("Creating a new Deployment",
 			"Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
-		if err = r.Create(ctx, dep); err != nil {
+		if err := r.K8Cli.Create(ctx, dep); err != nil {
 			log.Error(err, "Failed to create new Deployment",
 				"Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 
@@ -155,7 +154,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		log.Info(fmt.Sprintf("found diverging size (%d), changing back to (%d)", *found.Spec.Replicas, size),
 			"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 		found.Spec.Replicas = &size
-		if err = r.Update(ctx, found); err != nil {
+		if err := r.K8Cli.Update(ctx, found); err != nil {
 			log.Error(err, "Failed to update Deployment",
 				"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 
@@ -178,7 +177,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 					Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", memcached.Name, err),
 				},
 			)
-			if err := r.Status().Update(ctx, memcached); err != nil {
+			if err := r.K8Cli.StatusUpdate(ctx, memcached); err != nil {
 				log.Error(err, "Failed to update Memcached status")
 				return requeueWith(err)
 			}
@@ -205,7 +204,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", memcached.Name, size),
 		},
 	)
-	if err := r.Status().Update(ctx, memcached); err != nil {
+	if err := r.K8Cli.StatusUpdate(ctx, memcached); err != nil {
 		log.Error(err, "Failed to update Memcached status")
 		return requeueWith(err)
 	}
