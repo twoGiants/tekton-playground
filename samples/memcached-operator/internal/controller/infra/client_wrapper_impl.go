@@ -2,7 +2,6 @@ package infra
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -33,29 +32,13 @@ func (c *ClientWrapperImpl) Update(ctx context.Context, co client.Object) error 
 	return c.k8Client.Update(ctx, co)
 }
 
+type StubErrors = map[string][]error
+
 type ClientWrapperStub struct {
-	errArr map[string][]error
+	errArr StubErrors
 }
 
-func ClientWrapperStubFactory(name string, errMessages []string) *ClientWrapperStub {
-	errMap := make(map[string][]error)
-
-	var expectedErrs []error
-
-	for _, msg := range errMessages {
-		if msg == "" {
-			expectedErrs = append(expectedErrs, nil)
-		} else {
-			expectedErrs = append(expectedErrs, errors.New(msg))
-		}
-	}
-
-	errMap[name] = expectedErrs
-
-	return NewClientWrapperStub(errMap)
-}
-
-func NewClientWrapperStub(e map[string][]error) *ClientWrapperStub {
+func NewClientWrapperStub(e StubErrors) *ClientWrapperStub {
 	return &ClientWrapperStub{e}
 }
 

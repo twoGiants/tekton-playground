@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -157,8 +158,23 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		It("should requeue with error if k8 client fails to get the memcached resource after status update", func() {
+			expectedErr := errors.New("error reading the object")
+			errMap := infra.StubErrors{"Get": {nil, expectedErr}}
+			controllerReconciler := newReconcilerWithK8CliStub(errMap)
+
+			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			Expect(err).To(MatchError(expectedErr))
+
+			expectNoDeployment(typeNamespacedName)
+		})
+
+		It("should requeue with error if k8 client fails to create deployment", func() {
 			expectedErrMsg := "error reading the object"
-			controllerReconciler := newReconcilerWithK8CliStub("Get", []string{"", expectedErrMsg})
+			errMap := infra.StubErrors{
+				"Get":    {nil, nil, apierrors.NewNotFound(schema.GroupResource{}, "deployment not found")},
+				"Create": {errors.New(expectedErrMsg)},
+			}
+			controllerReconciler := newReconcilerWithK8CliStub(errMap)
 
 			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
 			Expect(err.Error()).To(Equal(expectedErrMsg))
