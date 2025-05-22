@@ -114,17 +114,10 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			log.Error(err, "Failed to define new Deployment resource for Memcached")
 
 			// The following implementation will update the status
-			meta.SetStatusCondition(
-				&memcached.Status.Conditions,
-				metav1.Condition{
-					Type:    typeAvailableMemcached,
-					Status:  metav1.ConditionFalse,
-					Reason:  "Reconciling",
-					Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", memcached.Name, err),
-				},
-			)
-			if err := r.Status().Update(ctx, memcached); err != nil {
-				log.Error(err, "Failed to update Memcached status")
+			if err := r.updateStatus(ctx, memcached,
+				metav1.ConditionFalse,
+				fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", memcached.Name, err),
+			); err != nil {
 				return requeueWith(err)
 			}
 
