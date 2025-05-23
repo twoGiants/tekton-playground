@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This a sample implementation of a Kubernetes controller with a reconciler using the Kubebuilder framework. Additional tests were implemented to have a 100% test coverage.
+This a sample implementation of a Kubernetes controller with a reconciler using the Kubebuilder framework. Additional tests were implemented to have a 100% (WIP: 79.2%) test coverage.
 
 ### Reconciliation Process
 
@@ -172,6 +172,26 @@ make uninstall
 
 ```sh
 make undeploy
+```
+
+## Test
+
+**Prepare you environment to run the tests:**
+
+```sh
+make setup-envtest
+```
+
+**Run all the tests:**
+
+```sh
+make test
+```
+
+**Check coverage in browser:**
+
+```sh
+go tool cover -html=cover.out
 ```
 
 ## Project Distribution
