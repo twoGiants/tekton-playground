@@ -572,7 +572,7 @@ main reconciliation logic
                     ↓
                     return
                     ↓
-        <--------------
+        <------------
         ↓
         error handling
         ↓
@@ -642,6 +642,7 @@ main reconciliation logic
 ↓
 return requeue for timeouts
 ```
+
 ### Example
 
-An example implementation of a CRD with a controller and a *reconciler* using the [kubebuilder](https://book.kubebuilder.io/getting-started) framework can be found in this repository in[samples/memcached-operator](../samples/memcached-operator/README.md).
+An example implementation of a CRD with a controller and a *reconciler* using the [kubebuilder](https://book.kubebuilder.io/getting-started) framework can be found in this repository in [samples/memcached-operator](../samples/memcached-operator/README.md).
