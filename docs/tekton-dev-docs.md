@@ -487,6 +487,161 @@ If the pod doesn't exist and the `TaskRun` has a workspace template, create the 
 
 And we are **done**.
 
+### PipelineRun Controller
+
+A brief diagram showing most, but not all, steps in the `PipelineRun` reconciler. Call chain of core reconcile methods:
+
+```plaintext
+FUNC: ReconcileKind
+↓
+setup and tracing
+↓
+read initial condition
+↓
+timeout check
+↓
+init on first start
+↓
+verification (chains)
+↓
+completion handling
+↓
+propagate pipeline name label
+↓
+cancellation check
+↓
+sync status with TaskRuns
+↓
+--> FUNC: updatePipelineRunStatusFromInformer
+    ↓
+    uses taskRunLister to get TaskRun
+    ↓
+    --> FUNC: updatePipelineRunStatusFromChildObjects
+        ↓
+        --> FUNC updatePipelineRunStatusFromChildRefs
+            ↓
+            updates PipelineRun's status with every TaskRun and CustomRun it owns
+            ↓
+            returns
+            ↓
+<------------
+↓
+main reconciliation logic
+↓
+--> FUNC: reconcile
+    ↓
+    setup, tracing, metrics
+    ↓
+    pending runs
+    ↓
+    pipeline resolution and validation
+    ↓
+    verification
+    ↓
+    DAG build
+    ↓
+    parameter, workspace and spec validation
+    ↓
+    parameter, workspace substitution
+    ↓
+    task state resolution
+    ↓
+    --> FUNC: resolvePipelineState
+        ↓
+        setup tracing
+        ↓
+        main loop: resolve each task
+        ↓
+        figure out TaskRun name
+        ↓
+        verification
+        ↓
+        prepare Task/CustomRun resolution (=fetch) function
+        ↓
+        resolve PipelineTask
+        ↓
+        --> FUNC: resources.ResolvePipelineTask
+            ↓
+            branch for Task / CustomTask
+            ↓
+            --> FUNC: setTaskRunsAndResolvedTask (getRun(runName) for CustomTask)
+                ↓
+                --> FUNC: resolveTask
+                    ↓
+                    put actual Task on ResolvedTask data structure
+                    ↓
+                    return
+                    ↓
+        <--------------
+        ↓
+        error handling
+        ↓
+        verification
+        ↓
+        append resolved Task state 
+        ↓
+        return
+        ↓
+    <----
+    ↓
+    build PipelineRunFacts for scheduling
+    ↓
+    Task/Param validations after resolution
+    ↓
+    CEL evaluation
+    ↓
+    cancellation, timeout handling
+    ↓
+    pre-flight checks: references valid, workspaces setup, affinity
+    ↓
+    scheduling next Task
+    ↓
+    --> FUNC: runNextSchedulableTask
+        ↓
+        get next executable task from DAG queue
+        ↓
+        validate result references
+        ↓
+        handle final tasks
+        ↓
+        propagate results to workspace bindings
+        ↓
+        main loop: actually schedule tasks
+        ↓
+        propagate results and artifacts
+        ↓
+        branch for Tasks and CustomTask
+        ↓
+        --> FUNC createTaskRuns (createCustomRuns for CustomTask)
+            ↓
+            validations
+            ↓
+            --> FUNC createTaskRun
+                ↓
+                create TaskRun instance
+                ↓
+                use client to create TaskRun CRD in cluster
+                ↓
+                return
+                ↓
+            <----
+            ↓
+            return
+            ↓
+        <----
+        ↓
+        return
+        ↓
+    <----
+    ↓
+    status calculation and finalization
+    ↓
+    return
+    ↓
+<----
+↓
+return requeue for timeouts
+```
 ### Example
 
 An example implementation of a CRD with a controller and a *reconciler* using the [kubebuilder](https://book.kubebuilder.io/getting-started) framework can be found in this repository in[samples/memcached-operator](../samples/memcached-operator/README.md).
