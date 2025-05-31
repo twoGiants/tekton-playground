@@ -39,7 +39,7 @@ import (
 )
 
 var _ = Describe("Memcached Controller", func() {
-	Context("When reconciling a resource", func() {
+	Context("When reconciling a resource (clean up deployment)", func() {
 		resourceName, ctx, typeNamespacedName, memcached := baseSetup()
 
 		BeforeEach(func() {
@@ -108,9 +108,10 @@ var _ = Describe("Memcached Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Requeue).To(BeTrue())
 		})
+
 	})
 
-	Context("When reconciling a resource and setting controller reference for deployment fails", func() {
+	Context("When reconciling a resource (no deployment clean up)", func() {
 		resourceName, ctx, typeNamespacedName, memcached := baseSetup()
 
 		BeforeEach(func() {
@@ -121,7 +122,7 @@ var _ = Describe("Memcached Controller", func() {
 			cleanUp(typeNamespacedName, false)
 		})
 
-		It("should set resource status to 'False' when setting controller reference fails", func() {
+		It("should set resource status to 'False' when setting controller reference for deployment fails", func() {
 			controllerReconciler, errMsg := newReconcilerWithFailingSetter()
 
 			By("Reconcile with error")
@@ -178,6 +179,19 @@ var _ = Describe("Memcached Controller", func() {
 
 			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
 			Expect(err.Error()).To(Equal(expectedErrMsg))
+
+			expectNoDeployment(typeNamespacedName)
+		})
+
+		It("should requeue with error if k8 client fails to get the deployment for other reasons than 'Not Found'", func() {
+			expectedErr := apierrors.NewTimeoutError("getting the deployment timed out", 1)
+			errMap := infra.StubErrors{
+				"Get": {nil, nil, expectedErr},
+			}
+			controllerReconciler := newReconcilerWithK8CliStub(errMap)
+
+			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			Expect(err).To(MatchError(expectedErr))
 
 			expectNoDeployment(typeNamespacedName)
 		})
