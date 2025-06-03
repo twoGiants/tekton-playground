@@ -643,6 +643,14 @@ main reconciliation logic
 return requeue for timeouts
 ```
 
+### First Pipelines in Pipelines Experiment
+
+This is the [code](https://github.com/tektoncd/experimental/tree/main/pipelines-in-pipelines) and it works like that:
+
+- *In my words:* extracts sub-pipeline spec from data structure, inits and starts a new `PipelineRun` using the existing API with `pipelineClientSet` and updates status.
+- functionality is provided by a minimal controller that implements the `Custom Task` interface
+- executes the `PipelineRun` in the custom controller, the actual logic is in `piprun.go`
+
 ### Example
 
 An example implementation of a CRD with a controller and a *reconciler* using the [kubebuilder](https://book.kubebuilder.io/getting-started) framework can be found in this repository in [samples/memcached-operator](../samples/memcached-operator/README.md).
