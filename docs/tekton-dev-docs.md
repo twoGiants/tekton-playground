@@ -651,6 +651,17 @@ This is the [code](https://github.com/tektoncd/experimental/tree/main/pipelines-
 - functionality is provided by a minimal controller that implements the `Custom Task` interface
 - executes the `PipelineRun` in the custom controller, the actual logic is in `piprun.go`
 
+### Second Pipelines in Pipelines Experiment
+
+This is the [code](https://github.com/tektoncd/experimental/tree/main/pipeline-to-taskrun) and it works like that:
+
+- *In my words:* [Reconciler](https://github.com/tektoncd/experimental/blob/main/pipeline-to-taskrun/pkg/reconciler/pipelinetotaskrun/pipelinetotaskrun.go#L116) grabs the tasks of a sub-pipeline and creates a `TaskRun` from it, runs it, collects results ... that is it.
+- takes the Pipeline and runs it in one `TaskRun,` combines the `Steps` from each `Task` (of that `Pipeline`) into a `TaskSpec` embedded in the `TaskRun`
+- how does it avoids collisions for *Params*, *Steps* and *Workspaces*:
+  - *[Params](https://github.com/tektoncd/experimental/tree/main/pipeline-to-taskrun#params):* namespaces by prepending the origins Task name to it
+  - *[Steps](https://github.com/tektoncd/experimental/tree/main/pipeline-to-taskrun#steps):* same
+  - *[Workspaces](https://github.com/tektoncd/experimental/tree/main/pipeline-to-taskrun#workspaces):* remaps, *not entirely clear*
+
 ### Example
 
 An example implementation of a CRD with a controller and a *reconciler* using the [kubebuilder](https://book.kubebuilder.io/getting-started) framework can be found in this repository in [samples/memcached-operator](../samples/memcached-operator/README.md).
