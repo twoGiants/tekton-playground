@@ -662,6 +662,19 @@ This is the [code](https://github.com/tektoncd/experimental/tree/main/pipeline-t
   - *[Steps](https://github.com/tektoncd/experimental/tree/main/pipeline-to-taskrun#steps):* same
   - *[Workspaces](https://github.com/tektoncd/experimental/tree/main/pipeline-to-taskrun#workspaces):* remaps, *not entirely clear*
 
+### `CustomRun` Implementation
+
+A list of PRs wich implement `CustomRun`. They are created by the `PipelineRun` reconciler.
+
+- spec was added in #5403
+- reconciler was added in #5662
+  - it does not do anything except sending an event
+- docs were added #5677
+- controller was repurposed in #6884 as part of [TEP-0137](https://github.com/tektoncd/community/blob/main/teps/0137-cloudevents-controller.md) but its not done yet, that is why it kept its name `customrun.go`
+  - `pkg/reconciler/notifications/customrun/customrun.go` is not supposed to be a `CustomRun` reconciler, its subject to change
+  - Andrea removed this controller from being started with the others
+- **IMPORTANT:** `CustomRun`'s are created by the `PipelineRun` reconciler in #5832
+
 ### Example
 
 An example implementation of a CRD with a controller and a *reconciler* using the [kubebuilder](https://book.kubebuilder.io/getting-started) framework can be found in this repository in [samples/memcached-operator](../samples/memcached-operator/README.md).
