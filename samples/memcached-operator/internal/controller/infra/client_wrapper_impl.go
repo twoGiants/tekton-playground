@@ -33,17 +33,50 @@ func (c *ClientWrapperImpl) Update(ctx context.Context, co client.Object) error 
 }
 
 type StubErrors = map[string][]error
+type InfraFuncs = map[string][]client.Client
 
 type ClientWrapperStub struct {
-	errArr StubErrors
+	errArr   StubErrors
+	infraArr InfraFuncs
 }
 
 func NewClientWrapperStub(e StubErrors) *ClientWrapperStub {
-	return &ClientWrapperStub{e}
+	return &ClientWrapperStub{e, nil}
 }
 
-func (c *ClientWrapperStub) Get(_ context.Context, _ types.NamespacedName, _ client.Object) error {
+func NewClientWrapperStubWithInfra(e StubErrors, i InfraFuncs) *ClientWrapperStub {
+	return &ClientWrapperStub{e, i}
+}
+
+func (c *ClientWrapperStub) Get(ctx context.Context, t types.NamespacedName, co client.Object) error {
+	if client := c.pickInfraFor("Get"); client != nil {
+		return client.Get(ctx, t, co)
+	}
+
 	return c.pickErrFor("Get")
+}
+
+func (c *ClientWrapperStub) pickInfraFor(name string) client.Client {
+	if c.infraArr == nil {
+		return nil
+	}
+
+	if _, ok := c.infraArr[name]; ok {
+		return c.nextInfra(name)
+	}
+
+	return nil
+}
+
+func (c *ClientWrapperStub) nextInfra(name string) client.Client {
+	if len(c.infraArr[name]) == 0 {
+		panic(fmt.Sprintf("no more infra functions configured in nulled '%s' method\n", name))
+	}
+
+	client := c.infraArr[name][0]
+	c.infraArr[name] = c.infraArr[name][1:]
+
+	return client
 }
 
 func (c *ClientWrapperStub) pickErrFor(name string) error {
@@ -69,14 +102,26 @@ func (c *ClientWrapperStub) nextErr(name string) error {
 	return err
 }
 
-func (c *ClientWrapperStub) StatusUpdate(_ context.Context, _ client.Object) error {
+func (c *ClientWrapperStub) StatusUpdate(ctx context.Context, co client.Object) error {
+	if client := c.pickInfraFor("StatusUpdate"); client != nil {
+		return client.Status().Update(ctx, co)
+	}
+
 	return c.pickErrFor("StatusUpdate")
 }
 
-func (c *ClientWrapperStub) Create(_ context.Context, _ client.Object) error {
+func (c *ClientWrapperStub) Create(ctx context.Context, co client.Object) error {
+	if client := c.pickInfraFor("Create"); client != nil {
+		return client.Create(ctx, co)
+	}
+
 	return c.pickErrFor("Create")
 }
 
-func (c *ClientWrapperStub) Update(ctx context.Context, _ client.Object) error {
+func (c *ClientWrapperStub) Update(ctx context.Context, co client.Object) error {
+	if client := c.pickInfraFor("Update"); client != nil {
+		return client.Update(ctx, co)
+	}
+
 	return c.pickErrFor("Update")
 }
