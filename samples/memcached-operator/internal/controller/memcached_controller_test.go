@@ -88,20 +88,8 @@ var _ = Describe("Memcached Controller", func() {
 			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
 			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
 
-			// get
-			dep := &appsv1.Deployment{}
-			err := k8sClient.Get(ctx, typeNamespacedName, dep)
-			Expect(err).NotTo(HaveOccurred())
-			// manually resize
-			var manuallyChangedSize int32 = 2
-			dep.Spec.Replicas = &manuallyChangedSize
-			err = k8sClient.Update(ctx, dep)
-			Expect(err).NotTo(HaveOccurred())
-			// check if resized
-			dep = &appsv1.Deployment{}
-			err = k8sClient.Get(ctx, typeNamespacedName, dep)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(*dep.Spec.Replicas).To(Equal(int32(2)))
+			By("Manually change deployment size to 2")
+			resizeDeploymentTo(2, typeNamespacedName)
 
 			By("Requeue after size was changed back to 1")
 			result, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
@@ -132,22 +120,9 @@ var _ = Describe("Memcached Controller", func() {
 			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
 
 			By("Manually change deployment size to 2")
-			// get
-			dep := &appsv1.Deployment{}
-			err := k8sClient.Get(ctx, typeNamespacedName, dep)
-			Expect(err).NotTo(HaveOccurred())
-			// manually resize
-			var manuallyChangedSize int32 = 2
-			dep.Spec.Replicas = &manuallyChangedSize
-			err = k8sClient.Update(ctx, dep)
-			Expect(err).NotTo(HaveOccurred())
-			// check if resized
-			dep = &appsv1.Deployment{}
-			err = k8sClient.Get(ctx, typeNamespacedName, dep)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(*dep.Spec.Replicas).To(Equal(int32(2)))
+			resizeDeploymentTo(2, typeNamespacedName)
 
-			_, err = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
 			Expect(err).To(MatchError(expectedErr))
 
 			By("Status 'False' after second reconciliation loop")
@@ -367,4 +342,22 @@ func expectNoDeployment(t types.NamespacedName) {
 	By("No deployment was created")
 	err := k8sClient.Get(ctx, t, &appsv1.Deployment{})
 	Expect(err).To(HaveOccurred())
+}
+
+func resizeDeploymentTo(size int32, t types.NamespacedName) {
+	// get
+	dep := &appsv1.Deployment{}
+	err := k8sClient.Get(ctx, t, dep)
+	Expect(err).NotTo(HaveOccurred())
+
+	// manually resize
+	dep.Spec.Replicas = &size
+	err = k8sClient.Update(ctx, dep)
+	Expect(err).NotTo(HaveOccurred())
+
+	// validate
+	dep = &appsv1.Deployment{}
+	err = k8sClient.Get(ctx, t, dep)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(*dep.Spec.Replicas).To(Equal(int32(2)))
 }
