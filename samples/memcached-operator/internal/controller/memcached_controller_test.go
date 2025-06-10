@@ -109,6 +109,53 @@ var _ = Describe("Memcached Controller", func() {
 			Expect(result.Requeue).To(BeTrue())
 		})
 
+		It("should requeue with error if k8 client fails to update deployment replicas size", func() {
+			expectedErr := errors.New("error updating the object")
+			errMap := infra.StubErrors{
+				"Get":    {nil, nil, nil, nil},
+				"Update": {expectedErr},
+			}
+			infraFn := infra.InfraFuncs{
+				"Get":          {k8sClient, k8sClient, k8sClient, k8sClient, k8sClient, k8sClient, k8sClient, k8sClient},
+				"Create":       {k8sClient},
+				"StatusUpdate": {k8sClient, k8sClient},
+			}
+
+			controllerReconciler := newReconcilerWithK8CliPartlyStub(errMap, infraFn)
+
+			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+
+			By("Status 'Unknown' after first reconciliation loop")
+			updated := &cachev1alpha1.Memcached{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
+			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionUnknown))
+			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
+
+			By("Manually change deployment size to 2")
+			// get
+			dep := &appsv1.Deployment{}
+			err := k8sClient.Get(ctx, typeNamespacedName, dep)
+			Expect(err).NotTo(HaveOccurred())
+			// manually resize
+			var manuallyChangedSize int32 = 2
+			dep.Spec.Replicas = &manuallyChangedSize
+			err = k8sClient.Update(ctx, dep)
+			Expect(err).NotTo(HaveOccurred())
+			// check if resized
+			dep = &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, typeNamespacedName, dep)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(*dep.Spec.Replicas).To(Equal(int32(2)))
+
+			_, err = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			Expect(err).To(MatchError(expectedErr))
+
+			By("Status 'False' after second reconciliation loop")
+			updated = &cachev1alpha1.Memcached{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
+			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
+			Expect(updated.Status.Conditions[0].Reason).To(Equal("Resizing"))
+		})
 	})
 
 	Context("When reconciling a resource (no deployment clean up)", func() {
@@ -280,6 +327,15 @@ func newReconcilerWithK8CliStub(errMap infra.StubErrors) *MemcachedReconciler {
 		Scheme:                 k8sClient.Scheme(),
 		SetControllerReference: ctrl.SetControllerReference,
 		K8Cli:                  infra.NewClientWrapperStub(errMap),
+	}
+}
+
+func newReconcilerWithK8CliPartlyStub(errMap infra.StubErrors, infraFn infra.InfraFuncs) *MemcachedReconciler {
+	return &MemcachedReconciler{
+		Client:                 k8sClient,
+		Scheme:                 k8sClient.Scheme(),
+		SetControllerReference: ctrl.SetControllerReference,
+		K8Cli:                  infra.NewClientWrapperStubWithInfra(errMap, infraFn),
 	}
 }
 
