@@ -33,59 +33,29 @@ func (c *ClientWrapperImpl) Update(ctx context.Context, co client.Object) error 
 }
 
 type StubErrors = map[string][]error
-type InfraFuncs = map[string][]client.Client
 
 type ClientWrapperStub struct {
-	errArr   StubErrors
-	infraArr InfraFuncs
+	errArr StubErrors
+	k8     client.Client
 }
 
 func NewClientWrapperStub(e StubErrors) *ClientWrapperStub {
 	return &ClientWrapperStub{e, nil}
 }
 
-func NewClientWrapperStubWithInfra(e StubErrors, i InfraFuncs) *ClientWrapperStub {
-	return &ClientWrapperStub{e, i}
+func NewClientWrapperStubWithK8(e StubErrors, k8 client.Client) *ClientWrapperStub {
+	return &ClientWrapperStub{e, k8}
 }
 
 func (c *ClientWrapperStub) Get(ctx context.Context, t types.NamespacedName, co client.Object) error {
-	if client := c.pickInfraFor("Get"); client != nil {
-		return client.Get(ctx, t, co)
+	if _, ok := c.errArr["Get"]; ok {
+		if nextErr := c.nextErr("Get"); nextErr != nil {
+			return nextErr
+		}
 	}
 
-	return c.pickErrFor("Get")
-}
-
-func (c *ClientWrapperStub) pickInfraFor(name string) client.Client {
-	if c.infraArr == nil {
-		return nil
-	}
-
-	if _, ok := c.infraArr[name]; ok {
-		return c.nextInfra(name)
-	}
-
-	return nil
-}
-
-func (c *ClientWrapperStub) nextInfra(name string) client.Client {
-	if len(c.infraArr[name]) == 0 {
-		panic(fmt.Sprintf("no more infra functions configured in nulled '%s' method\n", name))
-	}
-
-	client := c.infraArr[name][0]
-	c.infraArr[name] = c.infraArr[name][1:]
-
-	return client
-}
-
-func (c *ClientWrapperStub) pickErrFor(name string) error {
-	if c.errArr == nil {
-		return nil
-	}
-
-	if _, ok := c.errArr[name]; ok {
-		return c.nextErr(name)
+	if c.k8 != nil {
+		return c.k8.Get(ctx, t, co)
 	}
 
 	return nil
@@ -93,7 +63,8 @@ func (c *ClientWrapperStub) pickErrFor(name string) error {
 
 func (c *ClientWrapperStub) nextErr(name string) error {
 	if len(c.errArr[name]) == 0 {
-		panic(fmt.Sprintf("no more errors configured in nulled '%s' method\n", name))
+		fmt.Printf("no more errors configured in nulled '%s' method\n", name)
+		return nil
 	}
 
 	err := c.errArr[name][0]
@@ -103,25 +74,43 @@ func (c *ClientWrapperStub) nextErr(name string) error {
 }
 
 func (c *ClientWrapperStub) StatusUpdate(ctx context.Context, co client.Object) error {
-	if client := c.pickInfraFor("StatusUpdate"); client != nil {
-		return client.Status().Update(ctx, co)
+	if _, ok := c.errArr["StatusUpdate"]; ok {
+		if nextErr := c.nextErr("StatusUpdate"); nextErr != nil {
+			return nextErr
+		}
 	}
 
-	return c.pickErrFor("StatusUpdate")
+	if c.k8 != nil {
+		return c.k8.Status().Update(ctx, co)
+	}
+
+	return nil
 }
 
 func (c *ClientWrapperStub) Create(ctx context.Context, co client.Object) error {
-	if client := c.pickInfraFor("Create"); client != nil {
-		return client.Create(ctx, co)
+	if _, ok := c.errArr["Create"]; ok {
+		if nextErr := c.nextErr("Create"); nextErr != nil {
+			return nextErr
+		}
 	}
 
-	return c.pickErrFor("Create")
+	if c.k8 != nil {
+		return c.k8.Create(ctx, co)
+	}
+
+	return nil
 }
 
 func (c *ClientWrapperStub) Update(ctx context.Context, co client.Object) error {
-	if client := c.pickInfraFor("Update"); client != nil {
-		return client.Update(ctx, co)
+	if _, ok := c.errArr["Update"]; ok {
+		if nextErr := c.nextErr("Update"); nextErr != nil {
+			return nextErr
+		}
 	}
 
-	return c.pickErrFor("Update")
+	if c.k8 != nil {
+		return c.k8.Update(ctx, co)
+	}
+
+	return nil
 }

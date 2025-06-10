@@ -100,16 +100,10 @@ var _ = Describe("Memcached Controller", func() {
 		It("should requeue with error if k8 client fails to update deployment replicas size", func() {
 			expectedErr := errors.New("error updating the object")
 			errMap := infra.StubErrors{
-				"Get":    {nil, nil, nil, nil},
 				"Update": {expectedErr},
 			}
-			infraFn := infra.InfraFuncs{
-				"Get":          {k8sClient, k8sClient, k8sClient, k8sClient, k8sClient, k8sClient, k8sClient, k8sClient},
-				"Create":       {k8sClient},
-				"StatusUpdate": {k8sClient, k8sClient},
-			}
 
-			controllerReconciler := newReconcilerWithK8CliPartlyStub(errMap, infraFn)
+			controllerReconciler := newReconcilerWithK8CliAndErrors(errMap)
 
 			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
 
@@ -305,12 +299,12 @@ func newReconcilerWithK8CliStub(errMap infra.StubErrors) *MemcachedReconciler {
 	}
 }
 
-func newReconcilerWithK8CliPartlyStub(errMap infra.StubErrors, infraFn infra.InfraFuncs) *MemcachedReconciler {
+func newReconcilerWithK8CliAndErrors(errMap infra.StubErrors) *MemcachedReconciler {
 	return &MemcachedReconciler{
 		Client:                 k8sClient,
 		Scheme:                 k8sClient.Scheme(),
 		SetControllerReference: ctrl.SetControllerReference,
-		K8Cli:                  infra.NewClientWrapperStubWithInfra(errMap, infraFn),
+		K8Cli:                  infra.NewClientWrapperStubWithK8(errMap, k8sClient),
 	}
 }
 
