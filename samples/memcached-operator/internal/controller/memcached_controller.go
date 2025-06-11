@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -41,7 +40,6 @@ const typeAvailableMemcached = "Available"
 
 // MemcachedReconciler reconciles a Memcached object
 type MemcachedReconciler struct {
-	client.Client
 	Scheme                 *runtime.Scheme
 	SetControllerReference func(metav1.Object, metav1.Object, *runtime.Scheme, ...controllerutil.OwnerReferenceOption) error
 	K8Cli                  K8CliWrapper

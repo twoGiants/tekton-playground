@@ -263,7 +263,6 @@ func cleanUp(typeNamespacedName types.NamespacedName, withDeployment bool) {
 
 func newReconciler() *MemcachedReconciler {
 	return &MemcachedReconciler{
-		Client:                 k8sClient,
 		Scheme:                 k8sClient.Scheme(),
 		SetControllerReference: ctrl.SetControllerReference,
 		K8Cli:                  infra.NewClientWrapper(k8sClient),
@@ -272,7 +271,6 @@ func newReconciler() *MemcachedReconciler {
 
 func newReconcilerWithK8CliStub(errMap infra.StubErrors) *MemcachedReconciler {
 	return &MemcachedReconciler{
-		Client:                 k8sClient,
 		Scheme:                 k8sClient.Scheme(),
 		SetControllerReference: ctrl.SetControllerReference,
 		K8Cli:                  infra.NewClientWrapperStub(errMap),
@@ -281,7 +279,6 @@ func newReconcilerWithK8CliStub(errMap infra.StubErrors) *MemcachedReconciler {
 
 func newReconcilerWithK8CliAndErrors(errMap infra.StubErrors) *MemcachedReconciler {
 	return &MemcachedReconciler{
-		Client:                 k8sClient,
 		Scheme:                 k8sClient.Scheme(),
 		SetControllerReference: ctrl.SetControllerReference,
 		K8Cli:                  infra.NewClientWrapperStubWithK8(errMap, k8sClient),

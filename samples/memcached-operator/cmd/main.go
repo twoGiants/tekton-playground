@@ -204,7 +204,6 @@ func main() {
 	}
 
 	if err = (&controller.MemcachedReconciler{
-		Client:                 mgr.GetClient(),
 		Scheme:                 mgr.GetScheme(),
 		SetControllerReference: ctrl.SetControllerReference,
 		K8Cli:                  infra.NewClientWrapper(mgr.GetClient()),
