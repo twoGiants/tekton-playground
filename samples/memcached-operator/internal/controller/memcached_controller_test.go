@@ -55,10 +55,7 @@ var _ = Describe("Memcached Controller", func() {
 
 			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
 
-			updated := &cachev1alpha1.Memcached{}
-			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
-			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionUnknown))
-			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
+			expectCondition(metav1.ConditionUnknown, "Reconciling", typeNamespacedName)
 		})
 
 		It("should set resource status to 'True' during second reconciliation loop", func() {
@@ -69,10 +66,7 @@ var _ = Describe("Memcached Controller", func() {
 			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
 
 			By("Status 'True' after second reconciliation loop")
-			updated := &cachev1alpha1.Memcached{}
-			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
-			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
-			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
+			expectCondition(metav1.ConditionTrue, "Reconciling", typeNamespacedName)
 		})
 
 		It("should set resource size back to 1 if it was changed", func() {
@@ -83,10 +77,7 @@ var _ = Describe("Memcached Controller", func() {
 			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
 
 			By("Status 'True' after second reconciliation loop")
-			updated := &cachev1alpha1.Memcached{}
-			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
-			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
-			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
+			expectCondition(metav1.ConditionTrue, "Reconciling", typeNamespacedName)
 
 			By("Manually change deployment size to 2")
 			resizeDeploymentTo(2, typeNamespacedName)
@@ -99,19 +90,14 @@ var _ = Describe("Memcached Controller", func() {
 
 		It("should requeue with error if k8 client fails to update deployment replicas size", func() {
 			expectedErr := errors.New("error updating the object")
-			errMap := infra.StubErrors{
-				"Update": {expectedErr},
-			}
+			errMap := infra.StubErrors{"Update": {expectedErr}}
 
 			controllerReconciler := newReconcilerWithK8CliAndErrors(errMap)
 
 			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
 
 			By("Status 'Unknown' after first reconciliation loop")
-			updated := &cachev1alpha1.Memcached{}
-			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
-			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionUnknown))
-			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
+			expectCondition(metav1.ConditionUnknown, "Reconciling", typeNamespacedName)
 
 			By("Manually change deployment size to 2")
 			resizeDeploymentTo(2, typeNamespacedName)
@@ -120,10 +106,7 @@ var _ = Describe("Memcached Controller", func() {
 			Expect(err).To(MatchError(expectedErr))
 
 			By("Status 'False' after second reconciliation loop")
-			updated = &cachev1alpha1.Memcached{}
-			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
-			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
-			Expect(updated.Status.Conditions[0].Reason).To(Equal("Resizing"))
+			expectCondition(metav1.ConditionFalse, "Resizing", typeNamespacedName)
 		})
 	})
 
@@ -146,19 +129,16 @@ var _ = Describe("Memcached Controller", func() {
 			Expect(err.Error()).To(Equal(errMsg))
 
 			By("Status 'False' after first reconciliation loop")
-			updated := &cachev1alpha1.Memcached{}
-			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
-			Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
-			Expect(updated.Status.Conditions[0].Reason).To(Equal("Reconciling"))
+			expectCondition(metav1.ConditionFalse, "Reconciling", typeNamespacedName)
 		})
 
 		It("should requeue with error if k8 client fails to get the resource although it exists", func() {
-			expectedErrMsg := "error reading the object"
-			errMap := infra.StubErrors{"Get": []error{errors.New(expectedErrMsg)}}
+			expectedErr := errors.New("error reading the object")
+			errMap := infra.StubErrors{"Get": {expectedErr}}
 			controllerReconciler := newReconcilerWithK8CliStub(errMap)
 
 			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
-			Expect(err.Error()).To(Equal(expectedErrMsg))
+			Expect(err).To(MatchError(expectedErr))
 
 			expectNoDeployment(typeNamespacedName)
 		})
@@ -186,15 +166,15 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		It("should requeue with error if k8 client fails to create deployment", func() {
-			expectedErrMsg := "error reading the object"
+			expectedErr := errors.New("error reading the object")
 			errMap := infra.StubErrors{
 				"Get":    {nil, nil, apierrors.NewNotFound(schema.GroupResource{}, "deployment not found")},
-				"Create": {errors.New(expectedErrMsg)},
+				"Create": {expectedErr},
 			}
 			controllerReconciler := newReconcilerWithK8CliStub(errMap)
 
 			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
-			Expect(err.Error()).To(Equal(expectedErrMsg))
+			Expect(err).To(MatchError(expectedErr))
 
 			expectNoDeployment(typeNamespacedName)
 		})
@@ -354,4 +334,11 @@ func resizeDeploymentTo(size int32, t types.NamespacedName) {
 	err = k8sClient.Get(ctx, t, dep)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(*dep.Spec.Replicas).To(Equal(int32(2)))
+}
+
+func expectCondition(status metav1.ConditionStatus, reason string, t types.NamespacedName) {
+	updated := &cachev1alpha1.Memcached{}
+	Expect(k8sClient.Get(ctx, t, updated)).To(Succeed())
+	Expect(updated.Status.Conditions[0].Status).To(Equal(status))
+	Expect(updated.Status.Conditions[0].Reason).To(Equal(reason))
 }
