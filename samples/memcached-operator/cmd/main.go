@@ -39,7 +39,6 @@ import (
 
 	cachev1alpha1 "example.com/m/v2/api/v1alpha1"
 	"example.com/m/v2/internal/controller"
-	"example.com/m/v2/internal/controller/infra"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -203,11 +202,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.MemcachedReconciler{
-		Scheme:                 mgr.GetScheme(),
-		SetControllerReference: ctrl.SetControllerReference,
-		K8Cli:                  infra.NewClientWrapper(mgr.GetClient()),
-	}).SetupWithManager(mgr); err != nil {
+	if err = controller.NewReconciler(
+		mgr.GetScheme(),
+		mgr.GetClient(),
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Memcached")
 		os.Exit(1)
 	}

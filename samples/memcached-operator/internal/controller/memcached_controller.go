@@ -30,10 +30,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	cachev1alpha1 "example.com/m/v2/api/v1alpha1"
+	"example.com/m/v2/internal/controller/infra"
 )
 
 const typeAvailableMemcached = "Available"
@@ -43,6 +45,14 @@ type MemcachedReconciler struct {
 	Scheme                 *runtime.Scheme
 	SetControllerReference func(metav1.Object, metav1.Object, *runtime.Scheme, ...controllerutil.OwnerReferenceOption) error
 	K8Cli                  K8CliWrapper
+}
+
+func NewReconciler(scheme *runtime.Scheme, k8 client.Client) *MemcachedReconciler {
+	return &MemcachedReconciler{
+		Scheme:                 scheme,
+		SetControllerReference: ctrl.SetControllerReference,
+		K8Cli:                  infra.NewClientWrapper(k8),
+	}
 }
 
 // +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds,verbs=get;list;watch;create;update;patch;delete
