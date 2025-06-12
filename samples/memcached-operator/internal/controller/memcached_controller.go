@@ -55,6 +55,27 @@ func NewReconciler(scheme *runtime.Scheme, k8 client.Client) *MemcachedReconcile
 	}
 }
 
+func NewReconcilerNull(
+	scheme *runtime.Scheme,
+	k8 client.Client,
+	errMap infra.StubErrors,
+	withRealK8 bool,
+) *MemcachedReconciler {
+	if withRealK8 {
+		return &MemcachedReconciler{
+			Scheme:                 k8.Scheme(),
+			SetControllerReference: ctrl.SetControllerReference,
+			K8:                     infra.NewClientWrapperStubWithK8(errMap, k8),
+		}
+	}
+
+	return &MemcachedReconciler{
+		Scheme:                 k8.Scheme(),
+		SetControllerReference: ctrl.SetControllerReference,
+		K8:                     infra.NewClientWrapperStub(errMap),
+	}
+}
+
 // +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds/finalizers,verbs=update
