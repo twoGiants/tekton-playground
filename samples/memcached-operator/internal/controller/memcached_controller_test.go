@@ -269,7 +269,7 @@ func newReconcilerWithK8CliStub(errMap infra.StubErrors) *MemcachedReconciler {
 	return &MemcachedReconciler{
 		Scheme:                 k8sClient.Scheme(),
 		SetControllerReference: ctrl.SetControllerReference,
-		K8Cli:                  infra.NewClientWrapperStub(errMap),
+		K8:                     infra.NewClientWrapperStub(errMap),
 	}
 }
 
@@ -277,7 +277,7 @@ func newReconcilerWithK8CliAndErrors(errMap infra.StubErrors) *MemcachedReconcil
 	return &MemcachedReconciler{
 		Scheme:                 k8sClient.Scheme(),
 		SetControllerReference: ctrl.SetControllerReference,
-		K8Cli:                  infra.NewClientWrapperStubWithK8(errMap, k8sClient),
+		K8:                     infra.NewClientWrapperStubWithK8(errMap, k8sClient),
 	}
 }
 
