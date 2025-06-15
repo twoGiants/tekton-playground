@@ -51,30 +51,30 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		It("should set resource status to 'Unknown' during first reconciliation loop", func() {
-			controllerReconciler := newReconciler()
+			r := newReconciler()
 
-			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			_, _ = reconcileOnce(ctx, r, typeNamespacedName, false)
 
 			expectCondition(metav1.ConditionUnknown, "Reconciling", typeNamespacedName)
 		})
 
 		It("should set resource status to 'True' during second reconciliation loop", func() {
-			controllerReconciler := newReconciler()
+			r := newReconciler()
 
 			By("Reconcile two times")
-			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
-			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			_, _ = reconcileOnce(ctx, r, typeNamespacedName, false)
+			_, _ = reconcileOnce(ctx, r, typeNamespacedName, false)
 
 			By("Status 'True' after second reconciliation loop")
 			expectCondition(metav1.ConditionTrue, "Reconciling", typeNamespacedName)
 		})
 
 		It("should set resource size back to 1 if it was changed", func() {
-			controllerReconciler := newReconciler()
+			r := newReconciler()
 
 			By("Reconcile two times")
-			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
-			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			_, _ = reconcileOnce(ctx, r, typeNamespacedName, false)
+			_, _ = reconcileOnce(ctx, r, typeNamespacedName, false)
 
 			By("Status 'True' after second reconciliation loop")
 			expectCondition(metav1.ConditionTrue, "Reconciling", typeNamespacedName)
@@ -83,7 +83,7 @@ var _ = Describe("Memcached Controller", func() {
 			resizeDeploymentTo(2, typeNamespacedName)
 
 			By("Requeue after size was changed back to 1")
-			result, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			result, err := reconcileOnce(ctx, r, typeNamespacedName, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Requeue).To(BeTrue())
 		})
@@ -92,9 +92,9 @@ var _ = Describe("Memcached Controller", func() {
 			expectedErr := errors.New("error updating the object")
 			errMap := infra.StubErrors{"Update": {expectedErr}}
 
-			controllerReconciler := newReconcilerWithK8CliAndErrors(errMap)
+			r := newReconcilerNull(errMap, true)
 
-			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			_, _ = reconcileOnce(ctx, r, typeNamespacedName, false)
 
 			By("Status 'Unknown' after first reconciliation loop")
 			expectCondition(metav1.ConditionUnknown, "Reconciling", typeNamespacedName)
@@ -102,7 +102,7 @@ var _ = Describe("Memcached Controller", func() {
 			By("Manually change deployment size to 2")
 			resizeDeploymentTo(2, typeNamespacedName)
 
-			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			_, err := reconcileOnce(ctx, r, typeNamespacedName, true)
 			Expect(err).To(MatchError(expectedErr))
 
 			By("Status 'False' after second reconciliation loop")
@@ -122,10 +122,10 @@ var _ = Describe("Memcached Controller", func() {
 		})
 
 		It("should set resource status to 'False' when setting controller reference for deployment fails", func() {
-			controllerReconciler, errMsg := newReconcilerWithFailingSetter()
+			r, errMsg := newReconcilerWithFailingSetter()
 
 			By("Reconcile with error")
-			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			_, err := reconcileOnce(ctx, r, typeNamespacedName, true)
 			Expect(err.Error()).To(Equal(errMsg))
 
 			By("Status 'False' after first reconciliation loop")
@@ -135,9 +135,9 @@ var _ = Describe("Memcached Controller", func() {
 		It("should requeue with error if k8 client fails to get the resource although it exists", func() {
 			expectedErr := errors.New("error reading the object")
 			errMap := infra.StubErrors{"Get": {expectedErr}}
-			controllerReconciler := newReconcilerWithK8CliStub(errMap)
+			r := newReconcilerNull(errMap, false)
 
-			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			_, err := reconcileOnce(ctx, r, typeNamespacedName, true)
 			Expect(err).To(MatchError(expectedErr))
 
 			expectNoDeployment(typeNamespacedName)
@@ -146,9 +146,9 @@ var _ = Describe("Memcached Controller", func() {
 		It("should requeue with error if k8 client fails to update memcached resource status", func() {
 			expectedErr := errors.New("error updating resource status")
 			errMap := infra.StubErrors{"StatusUpdate": {expectedErr}}
-			controllerReconciler := newReconcilerWithK8CliStub(errMap)
+			r := newReconcilerNull(errMap, false)
 
-			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			_, err := reconcileOnce(ctx, r, typeNamespacedName, true)
 			Expect(err).To(MatchError(expectedErr))
 
 			expectNoDeployment(typeNamespacedName)
@@ -157,9 +157,9 @@ var _ = Describe("Memcached Controller", func() {
 		It("should requeue with error if k8 client fails to get the memcached resource after status update", func() {
 			expectedErr := errors.New("error reading the object")
 			errMap := infra.StubErrors{"Get": {nil, expectedErr}}
-			controllerReconciler := newReconcilerWithK8CliStub(errMap)
+			r := newReconcilerNull(errMap, false)
 
-			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			_, err := reconcileOnce(ctx, r, typeNamespacedName, true)
 			Expect(err).To(MatchError(expectedErr))
 
 			expectNoDeployment(typeNamespacedName)
@@ -171,9 +171,9 @@ var _ = Describe("Memcached Controller", func() {
 				"Get":    {nil, nil, apierrors.NewNotFound(schema.GroupResource{}, "deployment not found")},
 				"Create": {expectedErr},
 			}
-			controllerReconciler := newReconcilerWithK8CliStub(errMap)
+			r := newReconcilerNull(errMap, false)
 
-			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			_, err := reconcileOnce(ctx, r, typeNamespacedName, true)
 			Expect(err).To(MatchError(expectedErr))
 
 			expectNoDeployment(typeNamespacedName)
@@ -184,9 +184,9 @@ var _ = Describe("Memcached Controller", func() {
 			errMap := infra.StubErrors{
 				"Get": {nil, nil, expectedErr},
 			}
-			controllerReconciler := newReconcilerWithK8CliStub(errMap)
+			r := newReconcilerNull(errMap, false)
 
-			_, err := reconcileOnce(ctx, controllerReconciler, typeNamespacedName, true)
+			_, err := reconcileOnce(ctx, r, typeNamespacedName, true)
 			Expect(err).To(MatchError(expectedErr))
 
 			expectNoDeployment(typeNamespacedName)
@@ -196,9 +196,9 @@ var _ = Describe("Memcached Controller", func() {
 	Context("When reconciling a non existing Memcached resource", func() {
 		It("should not find the resource and stop the reconciliation loop", func() {
 			_, ctx, typeNamespacedName, _ := baseSetup()
-			controllerReconciler := newReconciler()
+			r := newReconciler()
 
-			_, _ = reconcileOnce(ctx, controllerReconciler, typeNamespacedName, false)
+			_, _ = reconcileOnce(ctx, r, typeNamespacedName, false)
 
 			err := k8sClient.Get(ctx, typeNamespacedName, &cachev1alpha1.Memcached{})
 			Expect(err).To(HaveOccurred())
@@ -265,20 +265,8 @@ func newReconciler() *MemcachedReconciler {
 	return NewReconciler(k8sClient.Scheme(), k8sClient)
 }
 
-func newReconcilerWithK8CliStub(errMap infra.StubErrors) *MemcachedReconciler {
-	return &MemcachedReconciler{
-		Scheme:                 k8sClient.Scheme(),
-		SetControllerReference: ctrl.SetControllerReference,
-		K8:                     infra.NewClientWrapperStub(errMap),
-	}
-}
-
-func newReconcilerWithK8CliAndErrors(errMap infra.StubErrors) *MemcachedReconciler {
-	return &MemcachedReconciler{
-		Scheme:                 k8sClient.Scheme(),
-		SetControllerReference: ctrl.SetControllerReference,
-		K8:                     infra.NewClientWrapperStubWithK8(errMap, k8sClient),
-	}
+func newReconcilerNull(errMap infra.StubErrors, withRealK8 bool) *MemcachedReconciler {
+	return NewReconcilerNull(k8sClient.Scheme(), k8sClient, errMap, withRealK8)
 }
 
 func newReconcilerWithFailingSetter() (*MemcachedReconciler, string) {
