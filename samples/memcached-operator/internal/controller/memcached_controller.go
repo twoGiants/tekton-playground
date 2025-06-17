@@ -51,9 +51,9 @@ type MemcachedReconciler struct {
 
 func NewReconciler(scheme *runtime.Scheme, k8 client.Client, ownerRefFor ownerRefFn) *MemcachedReconciler {
 	return &MemcachedReconciler{
-		scheme: scheme,
-		own:    ownerRefFor,
-		k8:     infra.NewClientWrapper(k8),
+		scheme,
+		ownerRefFor,
+		infra.NewClientWrapper(k8),
 	}
 }
 
@@ -64,19 +64,15 @@ func NewReconcilerNull(
 	errMap infra.StubErrors,
 	withRealK8 bool,
 ) *MemcachedReconciler {
+	k8Cli := infra.NewClientWrapperStub(errMap)
 	if withRealK8 {
-		return &MemcachedReconciler{
-			scheme: k8.Scheme(),
-			own:    ownerRefFor,
-			k8:     infra.NewClientWrapperStubWithK8(errMap, k8),
-		}
+		k8Cli = infra.NewClientWrapperStubWithK8(errMap, k8)
 	}
 
 	return &MemcachedReconciler{
-		scheme: k8.Scheme(),
-		own:    ownerRefFor,
-		k8:     infra.NewClientWrapperStub(errMap),
-	}
+		scheme,
+		ownerRefFor,
+		k8Cli}
 }
 
 // +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds,verbs=get;list;watch;create;update;patch;delete
