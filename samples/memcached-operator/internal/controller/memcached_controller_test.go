@@ -262,21 +262,20 @@ func cleanUp(typeNamespacedName types.NamespacedName, withDeployment bool) {
 }
 
 func newReconciler() *MemcachedReconciler {
-	return NewReconciler(k8sClient.Scheme(), k8sClient)
+	return NewReconciler(k8sClient.Scheme(), k8sClient, ctrl.SetControllerReference)
 }
 
 func newReconcilerNull(errMap infra.StubErrors, withRealK8 bool) *MemcachedReconciler {
-	return NewReconcilerNull(k8sClient.Scheme(), k8sClient, errMap, withRealK8)
+	return NewReconcilerNull(k8sClient.Scheme(), k8sClient, ctrl.SetControllerReference, errMap, withRealK8)
 }
 
 func newReconcilerWithFailingSetter() (*MemcachedReconciler, string) {
-	r := newReconciler()
 	errMsg := "Failed setting controller reference"
-	r.SetControllerReference = func(_, _ metav1.Object, _ *runtime.Scheme, _ ...controllerutil.OwnerReferenceOption) error {
+	ownerRefFor := func(_, _ metav1.Object, _ *runtime.Scheme, _ ...controllerutil.OwnerReferenceOption) error {
 		return errors.New(errMsg)
 	}
 
-	return r, errMsg
+	return NewReconciler(k8sClient.Scheme(), k8sClient, ownerRefFor), errMsg
 }
 
 func reconcileOnce(c context.Context, r *MemcachedReconciler, t types.NamespacedName, expectFail bool) (ctrl.Result, error) {

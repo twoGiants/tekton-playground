@@ -40,17 +40,19 @@ import (
 
 const typeAvailableMemcached = "Available"
 
+type ownerRefFn func(metav1.Object, metav1.Object, *runtime.Scheme, ...controllerutil.OwnerReferenceOption) error
+
 // MemcachedReconciler reconciles a Memcached object
 type MemcachedReconciler struct {
 	Scheme                 *runtime.Scheme
-	SetControllerReference func(metav1.Object, metav1.Object, *runtime.Scheme, ...controllerutil.OwnerReferenceOption) error
+	SetControllerReference ownerRefFn
 	K8                     K8Cli
 }
 
-func NewReconciler(scheme *runtime.Scheme, k8 client.Client) *MemcachedReconciler {
+func NewReconciler(scheme *runtime.Scheme, k8 client.Client, ownerRefFor ownerRefFn) *MemcachedReconciler {
 	return &MemcachedReconciler{
 		Scheme:                 scheme,
-		SetControllerReference: ctrl.SetControllerReference,
+		SetControllerReference: ownerRefFor,
 		K8:                     infra.NewClientWrapper(k8),
 	}
 }
@@ -58,20 +60,21 @@ func NewReconciler(scheme *runtime.Scheme, k8 client.Client) *MemcachedReconcile
 func NewReconcilerNull(
 	scheme *runtime.Scheme,
 	k8 client.Client,
+	ownerRefFor ownerRefFn,
 	errMap infra.StubErrors,
 	withRealK8 bool,
 ) *MemcachedReconciler {
 	if withRealK8 {
 		return &MemcachedReconciler{
 			Scheme:                 k8.Scheme(),
-			SetControllerReference: ctrl.SetControllerReference,
+			SetControllerReference: ownerRefFor,
 			K8:                     infra.NewClientWrapperStubWithK8(errMap, k8),
 		}
 	}
 
 	return &MemcachedReconciler{
 		Scheme:                 k8.Scheme(),
-		SetControllerReference: ctrl.SetControllerReference,
+		SetControllerReference: ownerRefFor,
 		K8:                     infra.NewClientWrapperStub(errMap),
 	}
 }

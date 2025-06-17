@@ -205,6 +205,7 @@ func main() {
 	if err = controller.NewReconciler(
 		mgr.GetScheme(),
 		mgr.GetClient(),
+		ctrl.SetControllerReference,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Memcached")
 		os.Exit(1)
