@@ -81,3 +81,19 @@ func Test_K8CliStub_NilResponses(t *testing.T) {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
+
+func Test_K8CliStub_NilAfterError(t *testing.T) {
+	errMap := map[string][]error{"Get": {errors.New("Get error")}}
+	ctx := context.Background()
+
+	k8 := infra.NewK8CliStub(errMap, nil)
+
+	if err := k8.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err == nil {
+		t.Errorf("expected %v, got nothing", errMap["Get"])
+	}
+
+	if err := k8.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
+}
+
