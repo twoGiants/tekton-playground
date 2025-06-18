@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func Test_ClientWrapper_ErrorResponses(t *testing.T) {
+func Test_K8CliStub_ErrorResponses(t *testing.T) {
 	testCases := []struct {
 		expectedErr error
 		operation   string
@@ -40,44 +40,44 @@ func Test_ClientWrapper_ErrorResponses(t *testing.T) {
 
 	ctx := context.Background()
 
-	k8ClientStub := infra.NewK8CliStub(responses, nil)
+	k8 := infra.NewK8CliStub(responses, nil)
 
-	if err := k8ClientStub.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err == nil {
+	if err := k8.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err == nil {
 		t.Errorf("expected %v, got nothing", responses["Get"])
 	}
 
-	if err := k8ClientStub.StatusUpdate(ctx, &corev1.Pod{}); err == nil {
+	if err := k8.StatusUpdate(ctx, &corev1.Pod{}); err == nil {
 		t.Errorf("expected %v, got nothing", responses["StatusUpdate"])
 	}
 
-	if err := k8ClientStub.Create(ctx, &corev1.Pod{}); err == nil {
+	if err := k8.Create(ctx, &corev1.Pod{}); err == nil {
 		t.Errorf("expected %v, got nothing", responses["Create"])
 	}
 
-	if err := k8ClientStub.Update(ctx, &corev1.Pod{}); err == nil {
+	if err := k8.Update(ctx, &corev1.Pod{}); err == nil {
 		t.Errorf("expected %v, got nothing", responses["Update"])
 	}
 }
 
-func Test_ClientWrapper_NilResponses(t *testing.T) {
+func Test_K8CliStub_NilResponses(t *testing.T) {
 	ctx := context.Background()
 	responses := make(map[string][]error)
 
-	k8ClientStub := infra.NewK8CliStub(responses, nil)
+	k8 := infra.NewK8CliStub(responses, nil)
 
-	if err := k8ClientStub.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err != nil {
+	if err := k8.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8ClientStub.StatusUpdate(ctx, &corev1.Pod{}); err != nil {
+	if err := k8.StatusUpdate(ctx, &corev1.Pod{}); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8ClientStub.Create(ctx, &corev1.Pod{}); err != nil {
+	if err := k8.Create(ctx, &corev1.Pod{}); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8ClientStub.Update(ctx, &corev1.Pod{}); err != nil {
+	if err := k8.Update(ctx, &corev1.Pod{}); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
