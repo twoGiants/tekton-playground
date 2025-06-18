@@ -40,7 +40,7 @@ func Test_ClientWrapper_ErrorResponses(t *testing.T) {
 
 	ctx := context.Background()
 
-	k8ClientStub := infra.NewClientWrapperStub(responses)
+	k8ClientStub := infra.NewK8CliStub(responses, nil)
 
 	if err := k8ClientStub.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err == nil {
 		t.Errorf("expected %v, got nothing", responses["Get"])
@@ -63,7 +63,7 @@ func Test_ClientWrapper_NilResponses(t *testing.T) {
 	ctx := context.Background()
 	responses := make(map[string][]error)
 
-	k8ClientStub := infra.NewClientWrapperStub(responses)
+	k8ClientStub := infra.NewK8CliStub(responses, nil)
 
 	if err := k8ClientStub.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err != nil {
 		t.Errorf("expected nil, got %v", err)

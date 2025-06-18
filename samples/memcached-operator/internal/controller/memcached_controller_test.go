@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -266,7 +267,11 @@ func newReconciler() *MemcachedReconciler {
 }
 
 func newReconcilerNull(errMap infra.StubErrors, withRealK8 bool) *MemcachedReconciler {
-	return NewReconcilerNull(k8sClient.Scheme(), k8sClient, ctrl.SetControllerReference, errMap, withRealK8)
+	var k8 client.Client
+	if withRealK8 {
+		k8 = k8sClient
+	}
+	return NewReconcilerNull(k8sClient.Scheme(), k8, ctrl.SetControllerReference, errMap)
 }
 
 func newReconcilerWithFailingSetter() (*MemcachedReconciler, string) {
