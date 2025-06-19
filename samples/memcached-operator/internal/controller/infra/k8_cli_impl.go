@@ -17,7 +17,12 @@ func NewK8CliImpl(k8 client.Client) *K8CliImpl {
 }
 
 func NewK8CliStub(e StubErrors, k8 client.Client) *K8CliStub {
-	return &K8CliStub{e, k8}
+	var cli *K8CliImpl
+	if k8 != nil {
+		cli = NewK8CliImpl(k8)
+	}
+
+	return &K8CliStub{e, cli}
 }
 
 func (k8 *K8CliImpl) Get(ctx context.Context, t types.NamespacedName, co client.Object) error {
@@ -40,7 +45,7 @@ type StubErrors = map[string][]error
 
 type K8CliStub struct {
 	errArr StubErrors
-	cli    client.Client
+	cli    *K8CliImpl
 }
 
 func (k8 *K8CliStub) Get(ctx context.Context, t types.NamespacedName, co client.Object) error {
@@ -83,7 +88,7 @@ func (k8 *K8CliStub) StatusUpdate(ctx context.Context, co client.Object) error {
 	}
 
 	if k8.cli != nil {
-		return k8.cli.Status().Update(ctx, co)
+		return k8.cli.StatusUpdate(ctx, co)
 	}
 
 	return nil
