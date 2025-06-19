@@ -198,9 +198,7 @@ func Test_K8CliStub_multiErrors(t *testing.T) {
 }
 
 func Test_K8CliStub_realK8Cli_withError(t *testing.T) {
-	errMap := make(map[string][]error)
-
-	k8 := infra.NewK8CliStub(errMap, k8TestCli)
+	k8 := infra.NewK8CliStub(nil, k8TestCli)
 
 	err := k8.Get(ctx, tnn, pod)
 	assertNotFound(t, err)

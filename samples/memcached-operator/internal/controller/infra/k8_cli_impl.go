@@ -44,10 +44,8 @@ type K8CliStub struct {
 }
 
 func (k8 *K8CliStub) Get(ctx context.Context, t types.NamespacedName, co client.Object) error {
-	if _, ok := k8.errArr["Get"]; ok {
-		if nextErr := k8.nextErr("Get"); nextErr != nil {
-			return nextErr
-		}
+	if nextErr := k8.nextErr("Get"); nextErr != nil {
+		return nextErr
 	}
 
 	if k8.cli != nil {
@@ -58,6 +56,16 @@ func (k8 *K8CliStub) Get(ctx context.Context, t types.NamespacedName, co client.
 }
 
 func (k8 *K8CliStub) nextErr(name string) error {
+	if k8.errArr == nil {
+		fmt.Println("no errors configured in nullable")
+		return nil
+	}
+
+	if _, ok := k8.errArr[name]; !ok {
+		fmt.Printf("no errors configured for '%s' method\n", name)
+		return nil
+	}
+
 	if len(k8.errArr[name]) == 0 {
 		fmt.Printf("no more errors configured in nulled '%s' method\n", name)
 		return nil
@@ -70,10 +78,8 @@ func (k8 *K8CliStub) nextErr(name string) error {
 }
 
 func (k8 *K8CliStub) StatusUpdate(ctx context.Context, co client.Object) error {
-	if _, ok := k8.errArr["StatusUpdate"]; ok {
-		if nextErr := k8.nextErr("StatusUpdate"); nextErr != nil {
-			return nextErr
-		}
+	if nextErr := k8.nextErr("StatusUpdate"); nextErr != nil {
+		return nextErr
 	}
 
 	if k8.cli != nil {
@@ -84,10 +90,8 @@ func (k8 *K8CliStub) StatusUpdate(ctx context.Context, co client.Object) error {
 }
 
 func (k8 *K8CliStub) Create(ctx context.Context, co client.Object) error {
-	if _, ok := k8.errArr["Create"]; ok {
-		if nextErr := k8.nextErr("Create"); nextErr != nil {
-			return nextErr
-		}
+	if nextErr := k8.nextErr("Create"); nextErr != nil {
+		return nextErr
 	}
 
 	if k8.cli != nil {
@@ -98,10 +102,8 @@ func (k8 *K8CliStub) Create(ctx context.Context, co client.Object) error {
 }
 
 func (k8 *K8CliStub) Update(ctx context.Context, co client.Object) error {
-	if _, ok := k8.errArr["Update"]; ok {
-		if nextErr := k8.nextErr("Update"); nextErr != nil {
-			return nextErr
-		}
+	if nextErr := k8.nextErr("Update"); nextErr != nil {
+		return nextErr
 	}
 
 	if k8.cli != nil {
