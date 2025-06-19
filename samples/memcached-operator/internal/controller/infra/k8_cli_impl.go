@@ -49,15 +49,21 @@ type K8CliStub struct {
 }
 
 func (k8 *K8CliStub) Get(ctx context.Context, t types.NamespacedName, co client.Object) error {
-	if nextErr := k8.nextErr("Get"); nextErr != nil {
+	return k8.do("Get", func() error {
+		return k8.cli.Get(ctx, t, co)
+	})
+}
+
+func (k8 *K8CliStub) do(name string, action func() error) error {
+	if nextErr := k8.nextErr(name); nextErr != nil {
 		return nextErr
 	}
 
-	if k8.cli != nil {
-		return k8.cli.Get(ctx, t, co)
+	if k8.cli == nil {
+		return nil
 	}
 
-	return nil
+	return action()
 }
 
 func (k8 *K8CliStub) nextErr(name string) error {
@@ -83,37 +89,19 @@ func (k8 *K8CliStub) nextErr(name string) error {
 }
 
 func (k8 *K8CliStub) StatusUpdate(ctx context.Context, co client.Object) error {
-	if nextErr := k8.nextErr("StatusUpdate"); nextErr != nil {
-		return nextErr
-	}
-
-	if k8.cli != nil {
+	return k8.do("StatusUpdate", func() error {
 		return k8.cli.StatusUpdate(ctx, co)
-	}
-
-	return nil
+	})
 }
 
 func (k8 *K8CliStub) Create(ctx context.Context, co client.Object) error {
-	if nextErr := k8.nextErr("Create"); nextErr != nil {
-		return nextErr
-	}
-
-	if k8.cli != nil {
+	return k8.do("Create", func() error {
 		return k8.cli.Create(ctx, co)
-	}
-
-	return nil
+	})
 }
 
 func (k8 *K8CliStub) Update(ctx context.Context, co client.Object) error {
-	if nextErr := k8.nextErr("Update"); nextErr != nil {
-		return nextErr
-	}
-
-	if k8.cli != nil {
+	return k8.do("Update", func() error {
 		return k8.cli.Update(ctx, co)
-	}
-
-	return nil
+	})
 }
