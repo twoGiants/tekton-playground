@@ -19,9 +19,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
 
-var k8TestCli client.Client
+var (
+	ctx       context.Context
+	k8TestCli client.Client
+	tnn       types.NamespacedName
+	pod       *corev1.Pod
+)
 
 func TestMain(m *testing.M) {
+	ctx = context.Background()
+
 	testEnv := &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
@@ -54,6 +61,8 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	tnn, pod = tnnAndPod()
+
 	code := m.Run()
 
 	if err = testEnv.Stop(); err != nil {
@@ -77,6 +86,14 @@ func binaryAssetsDir() string {
 		}
 	}
 	return ""
+}
+
+func tnnAndPod() (types.NamespacedName, *corev1.Pod) {
+	name := "not-existing-pod"
+	namespace := "not-existing-ns"
+	tnn := types.NamespacedName{Name: name, Namespace: namespace}
+	pod := &corev1.Pod{ObjectMeta: v1.ObjectMeta{Name: name, Namespace: namespace}}
+	return tnn, pod
 }
 
 func Test_K8CliStub_errorResponses(t *testing.T) {
@@ -107,95 +124,87 @@ func Test_K8CliStub_errorResponses(t *testing.T) {
 		responses[tc.operation] = []error{tc.expectedErr}
 	}
 
-	ctx := context.Background()
-
 	k8 := infra.NewK8CliStub(responses, nil)
 
-	if err := k8.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err == nil {
+	if err := k8.Get(ctx, tnn, pod); err == nil {
 		t.Errorf("expected %v, got nothing", responses["Get"])
 	}
 
-	if err := k8.StatusUpdate(ctx, &corev1.Pod{}); err == nil {
+	if err := k8.StatusUpdate(ctx, pod); err == nil {
 		t.Errorf("expected %v, got nothing", responses["StatusUpdate"])
 	}
 
-	if err := k8.Create(ctx, &corev1.Pod{}); err == nil {
+	if err := k8.Create(ctx, pod); err == nil {
 		t.Errorf("expected %v, got nothing", responses["Create"])
 	}
 
-	if err := k8.Update(ctx, &corev1.Pod{}); err == nil {
+	if err := k8.Update(ctx, pod); err == nil {
 		t.Errorf("expected %v, got nothing", responses["Update"])
 	}
 }
 
 func Test_K8CliStub_nilResponses(t *testing.T) {
-	ctx := context.Background()
 	responses := make(map[string][]error)
 
 	k8 := infra.NewK8CliStub(responses, nil)
 
-	if err := k8.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err != nil {
+	if err := k8.Get(ctx, tnn, pod); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8.StatusUpdate(ctx, &corev1.Pod{}); err != nil {
+	if err := k8.StatusUpdate(ctx, pod); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8.Create(ctx, &corev1.Pod{}); err != nil {
+	if err := k8.Create(ctx, pod); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8.Update(ctx, &corev1.Pod{}); err != nil {
+	if err := k8.Update(ctx, pod); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
 
 func Test_K8CliStub_nilAfterError(t *testing.T) {
 	errMap := map[string][]error{"Get": {errors.New("Get error")}}
-	ctx := context.Background()
 
 	k8 := infra.NewK8CliStub(errMap, nil)
 
-	if err := k8.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err == nil {
+	if err := k8.Get(ctx, tnn, pod); err == nil {
 		t.Errorf("expected %v, got nothing", errMap["Get"])
 	}
 
-	if err := k8.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err != nil {
+	if err := k8.Get(ctx, tnn, pod); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
 
 func Test_K8CliStub_multiErrors(t *testing.T) {
 	errMap := map[string][]error{"Get": {errors.New("err 1"), errors.New("err 2")}}
-	ctx := context.Background()
 
 	k8 := infra.NewK8CliStub(errMap, nil)
 
-	if err := k8.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err == nil {
+	if err := k8.Get(ctx, tnn, pod); err == nil {
 		t.Errorf("expected %v, got nothing", errMap["Get"][0])
 	}
 
-	if err := k8.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err == nil {
+	if err := k8.Get(ctx, tnn, pod); err == nil {
 		t.Errorf("expected %v, got nothing", errMap["Get"][1])
 	}
 
-	if err := k8.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err != nil {
+	if err := k8.Get(ctx, tnn, pod); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
 
 func Test_K8CliStub_realK8Cli_withError(t *testing.T) {
 	errMap := make(map[string][]error)
-	ctx := context.Background()
 
 	k8 := infra.NewK8CliStub(errMap, k8TestCli)
 
-	tnn := types.NamespacedName{Name: "not-existing-pod", Namespace: "not-existing-ns"}
-	err := k8.Get(ctx, tnn, &corev1.Pod{})
+	err := k8.Get(ctx, tnn, pod)
 	assertNotFound(t, err)
 
-	pod := &corev1.Pod{ObjectMeta: v1.ObjectMeta{Name: "not-existing-pod", Namespace: "not-existing-ns"}}
 	err = k8.StatusUpdate(ctx, pod)
 	assertNotFound(t, err)
 
