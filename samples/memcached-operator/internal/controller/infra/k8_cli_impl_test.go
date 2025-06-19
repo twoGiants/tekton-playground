@@ -79,7 +79,7 @@ func binaryAssetsDir() string {
 	return ""
 }
 
-func Test_K8CliStub_ErrorResponses(t *testing.T) {
+func Test_K8CliStub_errorResponses(t *testing.T) {
 	testCases := []struct {
 		expectedErr error
 		operation   string
@@ -128,7 +128,7 @@ func Test_K8CliStub_ErrorResponses(t *testing.T) {
 	}
 }
 
-func Test_K8CliStub_NilResponses(t *testing.T) {
+func Test_K8CliStub_nilResponses(t *testing.T) {
 	ctx := context.Background()
 	responses := make(map[string][]error)
 
@@ -151,7 +151,7 @@ func Test_K8CliStub_NilResponses(t *testing.T) {
 	}
 }
 
-func Test_K8CliStub_NilAfterError(t *testing.T) {
+func Test_K8CliStub_nilAfterError(t *testing.T) {
 	errMap := map[string][]error{"Get": {errors.New("Get error")}}
 	ctx := context.Background()
 
@@ -166,7 +166,7 @@ func Test_K8CliStub_NilAfterError(t *testing.T) {
 	}
 }
 
-func Test_K8CliStub_MultiErrors(t *testing.T) {
+func Test_K8CliStub_multiErrors(t *testing.T) {
 	errMap := map[string][]error{"Get": {errors.New("err 1"), errors.New("err 2")}}
 	ctx := context.Background()
 
@@ -185,7 +185,7 @@ func Test_K8CliStub_MultiErrors(t *testing.T) {
 	}
 }
 
-func Test_K8CliStub_ExecRealK8Cli(t *testing.T) {
+func Test_K8CliStub_realK8Cli_withError(t *testing.T) {
 	errMap := make(map[string][]error)
 	ctx := context.Background()
 
