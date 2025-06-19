@@ -11,6 +11,7 @@ import (
 	cachev1alpha1 "example.com/m/v2/api/v1alpha1"
 	"example.com/m/v2/internal/controller/infra"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -180,5 +181,21 @@ func Test_K8CliStub_MultiErrors(t *testing.T) {
 
 	if err := k8.Get(ctx, types.NamespacedName{}, &corev1.Pod{}); err != nil {
 		t.Errorf("expected nil, got %v", err)
+	}
+}
+
+func Test_K8CliStub_ExecRealK8Cli(t *testing.T) {
+	errMap := make(map[string][]error)
+	ctx := context.Background()
+
+	k8 := infra.NewK8CliStub(errMap, k8TestCli)
+
+	err := k8.Get(ctx, types.NamespacedName{Name: "not-existing-pod", Namespace: "default"}, &corev1.Pod{})
+	if err == nil {
+		t.Error("expected err, got nothing")
+	}
+
+	if !apierrors.IsNotFound(err) {
+		t.Errorf("expected NotFoundError, got %v", err)
 	}
 }
