@@ -223,3 +223,19 @@ func assertNotFound(t *testing.T, err error) {
 		t.Errorf("expected NotFoundError, got %v", err)
 	}
 }
+
+func Test_K8Cli_forwardsError(t *testing.T) {
+	k8 := infra.NewK8CliImpl(k8TestCli)
+
+	err := k8.Get(ctx, tnn, pod)
+	assertNotFound(t, err)
+
+	err = k8.StatusUpdate(ctx, pod)
+	assertNotFound(t, err)
+
+	err = k8.Create(ctx, pod)
+	assertNotFound(t, err)
+
+	err = k8.Update(ctx, pod)
+	assertNotFound(t, err)
+}
