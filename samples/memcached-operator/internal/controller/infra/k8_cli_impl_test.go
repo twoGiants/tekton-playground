@@ -201,6 +201,9 @@ func Test_K8CliStub_ExecRealK8Cli(t *testing.T) {
 
 	err = k8.Create(ctx, pod)
 	assertNotFound(t, err)
+
+	err = k8.Update(ctx, pod)
+	assertNotFound(t, err)
 }
 
 func assertNotFound(t *testing.T, err error) {
