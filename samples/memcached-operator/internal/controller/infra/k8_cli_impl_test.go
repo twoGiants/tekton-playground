@@ -3,12 +3,79 @@ package infra_test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
+	cachev1alpha1 "example.com/m/v2/api/v1alpha1"
 	"example.com/m/v2/internal/controller/infra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
+
+var k8TestCli client.Client
+
+func TestMain(m *testing.M) {
+	testEnv := &envtest.Environment{
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
+		ErrorIfCRDPathMissing: true,
+	}
+
+	if binaryAssetsDir() == "" {
+		fmt.Printf("failed to load test env k8s binary, make sure binaries are downloaded with 'make setup-envtest'")
+		os.Exit(1)
+	}
+	testEnv.BinaryAssetsDirectory = binaryAssetsDir()
+
+	if err := cachev1alpha1.AddToScheme(scheme.Scheme); err != nil {
+		fmt.Printf("failed to add scheme: %v\n", err)
+		os.Exit(1)
+	}
+
+	cfg, err := testEnv.Start()
+	if err != nil {
+		fmt.Printf("failed to start test environment: %v\n", err)
+		os.Exit(1)
+	}
+
+	if k8TestCli, err = client.New(cfg, client.Options{Scheme: scheme.Scheme}); err != nil {
+		fmt.Printf("failed to create k8s client: %v\n", err)
+		os.Exit(1)
+	}
+
+	if k8TestCli == nil {
+		fmt.Println("k8sClient is nil")
+		os.Exit(1)
+	}
+
+	code := m.Run()
+
+	if err = testEnv.Stop(); err != nil {
+		fmt.Printf("failed to stop test environment: %v\n", err)
+		os.Exit(1)
+	}
+
+	os.Exit(code)
+}
+
+func binaryAssetsDir() string {
+	basePath := filepath.Join("..", "..", "..", "bin", "k8s")
+	entries, err := os.ReadDir(basePath)
+	if err != nil {
+		fmt.Printf("failed to read directory %s", basePath)
+		return ""
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			return filepath.Join(basePath, entry.Name())
+		}
+	}
+	return ""
+}
 
 func Test_K8CliStub_ErrorResponses(t *testing.T) {
 	testCases := []struct {
