@@ -12,6 +12,7 @@ import (
 	"example.com/m/v2/internal/controller/infra"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -190,11 +191,19 @@ func Test_K8CliStub_ExecRealK8Cli(t *testing.T) {
 
 	k8 := infra.NewK8CliStub(errMap, k8TestCli)
 
-	err := k8.Get(ctx, types.NamespacedName{Name: "not-existing-pod", Namespace: "default"}, &corev1.Pod{})
+	tnn := types.NamespacedName{Name: "not-existing-pod", Namespace: "not-existing-ns"}
+	err := k8.Get(ctx, tnn, &corev1.Pod{})
+	assertNotFound(t, err)
+
+	pod := &corev1.Pod{ObjectMeta: v1.ObjectMeta{Name: "not-existing-pod", Namespace: "not-existing-ns"}}
+	err = k8.StatusUpdate(ctx, pod)
+	assertNotFound(t, err)
+}
+
+func assertNotFound(t *testing.T, err error) {
 	if err == nil {
 		t.Error("expected err, got nothing")
 	}
-
 	if !apierrors.IsNotFound(err) {
 		t.Errorf("expected NotFoundError, got %v", err)
 	}
