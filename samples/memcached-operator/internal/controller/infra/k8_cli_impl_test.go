@@ -198,6 +198,9 @@ func Test_K8CliStub_ExecRealK8Cli(t *testing.T) {
 	pod := &corev1.Pod{ObjectMeta: v1.ObjectMeta{Name: "not-existing-pod", Namespace: "not-existing-ns"}}
 	err = k8.StatusUpdate(ctx, pod)
 	assertNotFound(t, err)
+
+	err = k8.Create(ctx, pod)
+	assertNotFound(t, err)
 }
 
 func assertNotFound(t *testing.T, err error) {
