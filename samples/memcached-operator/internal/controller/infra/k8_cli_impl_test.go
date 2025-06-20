@@ -166,55 +166,47 @@ func k8Update(stubErrors infra.StubErrors) error {
 }
 
 func Test_K8CliStub_nilResponses(t *testing.T) {
-	responses := make(map[string][]error)
-
-	k8 := infra.NewK8CliStub(responses, nil)
-
-	if err := k8.Get(ctx, tnn, pod); err != nil {
+	if err := k8Get(nil); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8.StatusUpdate(ctx, pod); err != nil {
+	if err := k8StatusUpdate(nil); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8.Create(ctx, pod); err != nil {
+	if err := k8Create(nil); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8.Update(ctx, pod); err != nil {
+	if err := k8Update(nil); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
 
 func Test_K8CliStub_nilAfterError(t *testing.T) {
-	errMap := map[string][]error{"Get": {errors.New("Get error")}}
+	stubErrors := map[string][]error{"Get": {errors.New("Get error")}}
 
-	k8 := infra.NewK8CliStub(errMap, nil)
-
-	if err := k8.Get(ctx, tnn, pod); err == nil {
-		t.Errorf("expected %v, got nothing", errMap["Get"])
+	if err := k8Get(stubErrors); err == nil {
+		t.Errorf("expected %v, got nothing", stubErrors["Get"])
 	}
 
-	if err := k8.Get(ctx, tnn, pod); err != nil {
+	if err := k8Get(stubErrors); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
 
 func Test_K8CliStub_multiErrors(t *testing.T) {
-	errMap := map[string][]error{"Get": {errors.New("err 1"), errors.New("err 2")}}
+	stubErrors := map[string][]error{"Get": {errors.New("err 1"), errors.New("err 2")}}
 
-	k8 := infra.NewK8CliStub(errMap, nil)
-
-	if err := k8.Get(ctx, tnn, pod); err == nil {
-		t.Errorf("expected %v, got nothing", errMap["Get"][0])
+	if err := k8Get(stubErrors); err == nil {
+		t.Errorf("expected %v, got nothing", stubErrors["Get"][0])
 	}
 
-	if err := k8.Get(ctx, tnn, pod); err == nil {
-		t.Errorf("expected %v, got nothing", errMap["Get"][1])
+	if err := k8Get(stubErrors); err == nil {
+		t.Errorf("expected %v, got nothing", stubErrors["Get"][1])
 	}
 
-	if err := k8.Get(ctx, tnn, pod); err != nil {
+	if err := k8Get(stubErrors); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
