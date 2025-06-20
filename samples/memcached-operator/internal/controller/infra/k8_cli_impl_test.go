@@ -142,22 +142,26 @@ func Test_K8CliStub_errorResponses(t *testing.T) {
 }
 
 func k8Get(stubErrors infra.StubErrors) error {
-	k8 := infra.NewK8CliStub(stubErrors, nil)
+	k8 := newK8CliStub(stubErrors)
 	return k8.Get(ctx, tnn, pod)
 }
 
+func newK8CliStub(stubErrors infra.StubErrors) *infra.K8CliStub {
+	return infra.NewK8CliStub(stubErrors, nil)
+}
+
 func k8StatusUpdate(stubErrors infra.StubErrors) error {
-	k8 := infra.NewK8CliStub(stubErrors, nil)
+	k8 := newK8CliStub(stubErrors)
 	return k8.StatusUpdate(ctx, pod)
 }
 
 func k8Create(stubErrors infra.StubErrors) error {
-	k8 := infra.NewK8CliStub(stubErrors, nil)
+	k8 := newK8CliStub(stubErrors)
 	return k8.Create(ctx, pod)
 }
 
 func k8Update(stubErrors infra.StubErrors) error {
-	k8 := infra.NewK8CliStub(stubErrors, nil)
+	k8 := newK8CliStub(stubErrors)
 	return k8.Update(ctx, pod)
 }
 
