@@ -119,28 +119,46 @@ func Test_K8CliStub_errorResponses(t *testing.T) {
 		},
 	}
 
-	responses := make(map[string][]error)
+	stubErrors := make(map[string][]error)
 	for _, tc := range testCases {
-		responses[tc.operation] = []error{tc.expectedErr}
+		stubErrors[tc.operation] = []error{tc.expectedErr}
 	}
 
-	k8 := infra.NewK8CliStub(responses, nil)
-
-	if err := k8.Get(ctx, tnn, pod); err == nil {
-		t.Errorf("expected %v, got nothing", responses["Get"])
+	if err := k8Get(stubErrors); err == nil {
+		t.Errorf("expected %v, got nothing", stubErrors["Get"])
 	}
 
-	if err := k8.StatusUpdate(ctx, pod); err == nil {
-		t.Errorf("expected %v, got nothing", responses["StatusUpdate"])
+	if err := k8StatusUpdate(stubErrors); err == nil {
+		t.Errorf("expected %v, got nothing", stubErrors["StatusUpdate"])
 	}
 
-	if err := k8.Create(ctx, pod); err == nil {
-		t.Errorf("expected %v, got nothing", responses["Create"])
+	if err := k8Create(stubErrors); err == nil {
+		t.Errorf("expected %v, got nothing", stubErrors["Create"])
 	}
 
-	if err := k8.Update(ctx, pod); err == nil {
-		t.Errorf("expected %v, got nothing", responses["Update"])
+	if err := k8Update(stubErrors); err == nil {
+		t.Errorf("expected %v, got nothing", stubErrors["Update"])
 	}
+}
+
+func k8Get(stubErrors infra.StubErrors) error {
+	k8 := infra.NewK8CliStub(stubErrors, nil)
+	return k8.Get(ctx, tnn, pod)
+}
+
+func k8StatusUpdate(stubErrors infra.StubErrors) error {
+	k8 := infra.NewK8CliStub(stubErrors, nil)
+	return k8.StatusUpdate(ctx, pod)
+}
+
+func k8Create(stubErrors infra.StubErrors) error {
+	k8 := infra.NewK8CliStub(stubErrors, nil)
+	return k8.Create(ctx, pod)
+}
+
+func k8Update(stubErrors infra.StubErrors) error {
+	k8 := infra.NewK8CliStub(stubErrors, nil)
+	return k8.Update(ctx, pod)
 }
 
 func Test_K8CliStub_nilResponses(t *testing.T) {
