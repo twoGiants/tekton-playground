@@ -46,7 +46,7 @@ type ownerRefFn func(metav1.Object, metav1.Object, *runtime.Scheme, ...controlle
 type MemcachedReconciler struct {
 	scheme *runtime.Scheme
 	own    ownerRefFn
-	k8     K8Cli
+	k8     *infra.K8CliImpl
 }
 
 func NewReconciler(scheme *runtime.Scheme, k8 client.Client, ownerRefFor ownerRefFn) *MemcachedReconciler {
