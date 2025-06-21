@@ -26,6 +26,8 @@ var (
 	pod       *corev1.Pod
 )
 
+// Test setup with test environment. Make sure to run 'make setup-envtest' to download
+// the binaries needed for tests using the k8 cli.
 func TestMain(m *testing.M) {
 	ctx = context.Background()
 
@@ -96,6 +98,44 @@ func tnnAndPod() (types.NamespacedName, *corev1.Pod) {
 	return tnn, pod
 }
 
+// Test framework with Signature Shielding. If infra API changes the only place
+// for updates in the tests will be in the helper functions.
+// stubErrors: configurable responses for the stub
+// cliType: "" ==  stub|stubWithK8|impl; returns either real infrastructure or
+// Embedded Stub
+func newK8Cli(stubErrors infra.StubErrors, cliType string) *infra.K8CliImpl {
+	switch cliType {
+	case "stub", "":
+		return infra.NewK8CliStub(stubErrors, nil)
+	case "stubWithK8":
+		return infra.NewK8CliStub(stubErrors, k8TestCli)
+	case "impl":
+		return infra.NewK8CliImpl(k8TestCli)
+	default:
+		return infra.NewK8CliStub(stubErrors, nil)
+	}
+}
+
+func k8Get(stubErrors infra.StubErrors, cliType string) error {
+	k8 := newK8Cli(stubErrors, cliType)
+	return k8.Get(ctx, tnn, pod)
+}
+
+func k8StatusUpdate(stubErrors infra.StubErrors, cliType string) error {
+	k8 := newK8Cli(stubErrors, cliType)
+	return k8.StatusUpdate(ctx, pod)
+}
+
+func k8Create(stubErrors infra.StubErrors, cliType string) error {
+	k8 := newK8Cli(stubErrors, cliType)
+	return k8.Create(ctx, pod)
+}
+
+func k8Update(stubErrors infra.StubErrors, cliType string) error {
+	k8 := newK8Cli(stubErrors, cliType)
+	return k8.Update(ctx, pod)
+}
+
 func Test_K8CliStub_errorResponses(t *testing.T) {
 	testCases := []struct {
 		expectedErr error
@@ -124,61 +164,37 @@ func Test_K8CliStub_errorResponses(t *testing.T) {
 		stubErrors[tc.operation] = []error{tc.expectedErr}
 	}
 
-	if err := k8Get(stubErrors); err == nil {
+	if err := k8Get(stubErrors, "stub"); err == nil {
 		t.Errorf("expected %v, got nothing", stubErrors["Get"])
 	}
 
-	if err := k8StatusUpdate(stubErrors); err == nil {
+	if err := k8StatusUpdate(stubErrors, "stub"); err == nil {
 		t.Errorf("expected %v, got nothing", stubErrors["StatusUpdate"])
 	}
 
-	if err := k8Create(stubErrors); err == nil {
+	if err := k8Create(stubErrors, "stub"); err == nil {
 		t.Errorf("expected %v, got nothing", stubErrors["Create"])
 	}
 
-	if err := k8Update(stubErrors); err == nil {
+	if err := k8Update(stubErrors, "stub"); err == nil {
 		t.Errorf("expected %v, got nothing", stubErrors["Update"])
 	}
 }
 
-func k8Get(stubErrors infra.StubErrors) error {
-	k8 := newK8CliStub(stubErrors)
-	return k8.Get(ctx, tnn, pod)
-}
-
-func newK8CliStub(stubErrors infra.StubErrors) *infra.K8CliStub {
-	return infra.NewK8CliStub(stubErrors, nil)
-}
-
-func k8StatusUpdate(stubErrors infra.StubErrors) error {
-	k8 := newK8CliStub(stubErrors)
-	return k8.StatusUpdate(ctx, pod)
-}
-
-func k8Create(stubErrors infra.StubErrors) error {
-	k8 := newK8CliStub(stubErrors)
-	return k8.Create(ctx, pod)
-}
-
-func k8Update(stubErrors infra.StubErrors) error {
-	k8 := newK8CliStub(stubErrors)
-	return k8.Update(ctx, pod)
-}
-
 func Test_K8CliStub_nilResponses(t *testing.T) {
-	if err := k8Get(nil); err != nil {
+	if err := k8Get(nil, ""); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8StatusUpdate(nil); err != nil {
+	if err := k8StatusUpdate(nil, ""); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8Create(nil); err != nil {
+	if err := k8Create(nil, ""); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8Update(nil); err != nil {
+	if err := k8Update(nil, ""); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
@@ -186,11 +202,11 @@ func Test_K8CliStub_nilResponses(t *testing.T) {
 func Test_K8CliStub_nilAfterError(t *testing.T) {
 	stubErrors := map[string][]error{"Get": {errors.New("Get error")}}
 
-	if err := k8Get(stubErrors); err == nil {
+	if err := k8Get(stubErrors, "stub"); err == nil {
 		t.Errorf("expected %v, got nothing", stubErrors["Get"])
 	}
 
-	if err := k8Get(stubErrors); err != nil {
+	if err := k8Get(stubErrors, "stub"); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
@@ -198,32 +214,30 @@ func Test_K8CliStub_nilAfterError(t *testing.T) {
 func Test_K8CliStub_multiErrors(t *testing.T) {
 	stubErrors := map[string][]error{"Get": {errors.New("err 1"), errors.New("err 2")}}
 
-	if err := k8Get(stubErrors); err == nil {
+	if err := k8Get(stubErrors, "stub"); err == nil {
 		t.Errorf("expected %v, got nothing", stubErrors["Get"][0])
 	}
 
-	if err := k8Get(stubErrors); err == nil {
+	if err := k8Get(stubErrors, "stub"); err == nil {
 		t.Errorf("expected %v, got nothing", stubErrors["Get"][1])
 	}
 
-	if err := k8Get(stubErrors); err != nil {
+	if err := k8Get(stubErrors, "stub"); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
 
 func Test_K8CliStub_realK8Cli_withError(t *testing.T) {
-	k8 := infra.NewK8CliStub(nil, k8TestCli)
-
-	err := k8.Get(ctx, tnn, pod)
+	err := k8Get(nil, "stubWithK8")
 	assertNotFound(t, err)
 
-	err = k8.StatusUpdate(ctx, pod)
+	err = k8StatusUpdate(nil, "stubWithK8")
 	assertNotFound(t, err)
 
-	err = k8.Create(ctx, pod)
+	err = k8Create(nil, "stubWithK8")
 	assertNotFound(t, err)
 
-	err = k8.Update(ctx, pod)
+	err = k8Update(nil, "stubWithK8")
 	assertNotFound(t, err)
 }
 
@@ -237,17 +251,15 @@ func assertNotFound(t *testing.T, err error) {
 }
 
 func Test_K8Cli_forwardsError(t *testing.T) {
-	k8 := infra.NewK8CliImpl(k8TestCli)
-
-	err := k8.Get(ctx, tnn, pod)
+	err := k8Get(nil, "impl")
 	assertNotFound(t, err)
 
-	err = k8.StatusUpdate(ctx, pod)
+	err = k8StatusUpdate(nil, "impl")
 	assertNotFound(t, err)
 
-	err = k8.Create(ctx, pod)
+	err = k8Create(nil, "impl")
 	assertNotFound(t, err)
 
-	err = k8.Update(ctx, pod)
+	err = k8Update(nil, "impl")
 	assertNotFound(t, err)
 }
