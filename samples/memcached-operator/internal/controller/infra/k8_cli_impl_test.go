@@ -138,8 +138,8 @@ func k8Update(stubErrors infra.StubErrors, cliType string) error {
 	return k8.Update(ctx, pod)
 }
 
-// Unit Tests start here
-func Test_K8CliStub_configurableErrorResponses(t *testing.T) {
+// Start unit tests
+func Test_K8Cli_stubWithConfigurableResponses(t *testing.T) {
 	testCases := []struct {
 		expectedErr error
 		operation   string
@@ -184,7 +184,7 @@ func Test_K8CliStub_configurableErrorResponses(t *testing.T) {
 	}
 }
 
-func Test_K8CliStub_nilResponses(t *testing.T) {
+func Test_K8Cli_stubWithNilResponses(t *testing.T) {
 	testCases := []struct {
 		name          string
 		stubErrors    infra.StubErrors
@@ -220,7 +220,7 @@ func Test_K8CliStub_nilResponses(t *testing.T) {
 }
 
 // TODO refactor to table driven tests
-func Test_K8CliStub_nilAfterError(t *testing.T) {
+func Test_K8Cli_stubWithNilAfterError(t *testing.T) {
 	stubErrors := map[string][]error{"Get": {errors.New("Get error")}}
 
 	if err := k8Get(stubErrors, "stub"); err == nil {
@@ -232,7 +232,7 @@ func Test_K8CliStub_nilAfterError(t *testing.T) {
 	}
 }
 
-func Test_K8CliStub_multiErrors(t *testing.T) {
+func Test_K8Cli_stubWithMultiErrors(t *testing.T) {
 	stubErrors := map[string][]error{"Get": {errors.New("err 1"), errors.New("err 2")}}
 
 	if err := k8Get(stubErrors, "stub"); err == nil {
@@ -248,7 +248,7 @@ func Test_K8CliStub_multiErrors(t *testing.T) {
 	}
 }
 
-func Test_K8CliStub_realK8Cli_withError(t *testing.T) {
+func Test_K8Cli_stubWithRealK8CliWithError(t *testing.T) {
 	err := k8Get(nil, "stubWithK8")
 	assertNotFound(t, err)
 
@@ -271,7 +271,7 @@ func assertNotFound(t *testing.T, err error) {
 	}
 }
 
-func Test_K8Cli_forwardsError(t *testing.T) {
+func Test_K8Cli_implWithError(t *testing.T) {
 	err := k8Get(nil, "impl")
 	assertNotFound(t, err)
 
