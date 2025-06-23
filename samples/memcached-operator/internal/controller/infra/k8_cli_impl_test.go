@@ -138,6 +138,7 @@ func k8Update(stubErrors infra.StubErrors, cliType string) error {
 	return k8.Update(ctx, pod)
 }
 
+// Unit Tests start here
 func Test_K8CliStub_configurableErrorResponses(t *testing.T) {
 	testCases := []struct {
 		expectedErr error
@@ -184,20 +185,37 @@ func Test_K8CliStub_configurableErrorResponses(t *testing.T) {
 }
 
 func Test_K8CliStub_nilResponses(t *testing.T) {
-	if err := k8Get(nil, "stub"); err != nil {
-		t.Errorf("expected nil, got %v", err)
-	}
+	testCases := []struct {
+		name          string
+		stubErrors    infra.StubErrors
+		expectedError error
+	}{{
+		name:          "no errors provided for stub",
+		expectedError: nil,
+	}, {
+		name:          "error for non existing method name",
+		stubErrors:    infra.StubErrors{"NonExisting": {errors.New("NonExisting error")}},
+		expectedError: nil,
+	}}
 
-	if err := k8StatusUpdate(nil, "stub"); err != nil {
-		t.Errorf("expected nil, got %v", err)
-	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := k8Get(tc.stubErrors, "stub"); err != tc.expectedError {
+				t.Errorf("expected %v, got %v", tc.expectedError, err)
+			}
 
-	if err := k8Create(nil, "stub"); err != nil {
-		t.Errorf("expected nil, got %v", err)
-	}
+			if err := k8StatusUpdate(tc.stubErrors, "stub"); err != tc.expectedError {
+				t.Errorf("expected %v, got %v", tc.expectedError, err)
+			}
 
-	if err := k8Update(nil, "stub"); err != nil {
-		t.Errorf("expected nil, got %v", err)
+			if err := k8Create(tc.stubErrors, "stub"); err != tc.expectedError {
+				t.Errorf("expected %v, got %v", tc.expectedError, err)
+			}
+
+			if err := k8Update(tc.stubErrors, "stub"); err != tc.expectedError {
+				t.Errorf("expected %v, got %v", tc.expectedError, err)
+			}
+		})
 	}
 }
 
@@ -210,26 +228,6 @@ func Test_K8CliStub_nilAfterError(t *testing.T) {
 	}
 
 	if err := k8Get(stubErrors, "stub"); err != nil {
-		t.Errorf("expected nil, got %v", err)
-	}
-}
-
-func Test_K8CliStub_nonExistingMethodName(t *testing.T) {
-	stubErrors := map[string][]error{"NonExisting": {errors.New("Get error")}}
-
-	if err := k8Get(stubErrors, "stub"); err != nil {
-		t.Errorf("expected nil, got %v", err)
-	}
-
-	if err := k8StatusUpdate(stubErrors, "stub"); err != nil {
-		t.Errorf("expected nil, got %v", err)
-	}
-
-	if err := k8Create(stubErrors, "stub"); err != nil {
-		t.Errorf("expected nil, got %v", err)
-	}
-
-	if err := k8Update(stubErrors, "stub"); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
