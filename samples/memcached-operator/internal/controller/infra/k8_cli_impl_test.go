@@ -138,7 +138,7 @@ func k8Update(stubErrors infra.StubErrors, cliType string) error {
 	return k8.Update(ctx, pod)
 }
 
-func Test_K8CliStub_errorResponses(t *testing.T) {
+func Test_K8CliStub_configurableErrorResponses(t *testing.T) {
 	testCases := []struct {
 		expectedErr error
 		operation   string
@@ -201,6 +201,7 @@ func Test_K8CliStub_nilResponses(t *testing.T) {
 	}
 }
 
+// TODO refactor to table driven tests
 func Test_K8CliStub_nilAfterError(t *testing.T) {
 	stubErrors := map[string][]error{"Get": {errors.New("Get error")}}
 
@@ -209,6 +210,26 @@ func Test_K8CliStub_nilAfterError(t *testing.T) {
 	}
 
 	if err := k8Get(stubErrors, "stub"); err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
+}
+
+func Test_K8CliStub_nonExistingMethodName(t *testing.T) {
+	stubErrors := map[string][]error{"NonExisting": {errors.New("Get error")}}
+
+	if err := k8Get(stubErrors, "stub"); err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
+
+	if err := k8StatusUpdate(stubErrors, "stub"); err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
+
+	if err := k8Create(stubErrors, "stub"); err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
+
+	if err := k8Update(stubErrors, "stub"); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
