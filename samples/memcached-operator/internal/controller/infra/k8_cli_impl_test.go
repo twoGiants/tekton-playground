@@ -100,12 +100,14 @@ func tnnAndPod() (types.NamespacedName, *corev1.Pod) {
 
 // Test framework with Signature Shielding. If infra API changes the only place
 // for updates in the tests will be in the helper functions.
+//
 // stubErrors: configurable responses for the stub
-// cliType: "" ==  stub|stubWithK8|impl; returns either real infrastructure or
-// Embedded Stub
+//
+// cliType: stub|stubWithK8|impl; returns either real infrastructure or Embedded
+// Stub
 func newK8Cli(stubErrors infra.StubErrors, cliType string) *infra.K8CliImpl {
 	switch cliType {
-	case "stub", "":
+	case "stub":
 		return infra.NewK8CliStub(stubErrors, nil)
 	case "stubWithK8":
 		return infra.NewK8CliStub(stubErrors, k8TestCli)
@@ -182,19 +184,19 @@ func Test_K8CliStub_errorResponses(t *testing.T) {
 }
 
 func Test_K8CliStub_nilResponses(t *testing.T) {
-	if err := k8Get(nil, ""); err != nil {
+	if err := k8Get(nil, "stub"); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8StatusUpdate(nil, ""); err != nil {
+	if err := k8StatusUpdate(nil, "stub"); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8Create(nil, ""); err != nil {
+	if err := k8Create(nil, "stub"); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8Update(nil, ""); err != nil {
+	if err := k8Update(nil, "stub"); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
