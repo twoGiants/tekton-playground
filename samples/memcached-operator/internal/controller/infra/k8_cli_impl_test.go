@@ -294,3 +294,17 @@ func Test_K8Cli_implPropagatesError(t *testing.T) {
 	err = k8Update(nil, "impl")
 	assertNotFound(t, err)
 }
+
+func Test_K8Cli_stubWithK8PropagatesError(t *testing.T) {
+	err := k8Get(nil, "stubWithK8")
+	assertNotFound(t, err)
+
+	err = k8StatusUpdate(nil, "stubWithK8")
+	assertNotFound(t, err)
+
+	err = k8Create(nil, "stubWithK8")
+	assertNotFound(t, err)
+
+	err = k8Update(nil, "stubWithK8")
+	assertNotFound(t, err)
+}
