@@ -228,31 +228,39 @@ func Test_K8Cli_stubWithNilResponses(t *testing.T) {
 	}
 }
 
-// TODO refactor to table driven tests
 func Test_K8Cli_stubWithNilAfterError(t *testing.T) {
-	stubErrors := map[string][]error{"Get": {errors.New("Get error")}}
+	stubErrors := infra.StubErrors{
+		"Get":          {errors.New("Get error")},
+		"StatusUpdate": {errors.New("StatusUpdate error")},
+		"Create":       {errors.New("Create error")},
+		"Update":       {errors.New("Update error")},
+	}
 
 	if err := k8Get(stubErrors, "stub"); err == nil {
 		t.Errorf("expected %v, got nothing", stubErrors["Get"])
 	}
-
 	if err := k8Get(stubErrors, "stub"); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
-}
 
-func Test_K8Cli_stubWithMultiErrors(t *testing.T) {
-	stubErrors := map[string][]error{"Get": {errors.New("err 1"), errors.New("err 2")}}
-
-	if err := k8Get(stubErrors, "stub"); err == nil {
-		t.Errorf("expected %v, got nothing", stubErrors["Get"][0])
+	if err := k8StatusUpdate(stubErrors, "stub"); err == nil {
+		t.Errorf("expected %v, got nothing", stubErrors["StatusUpdate"])
+	}
+	if err := k8StatusUpdate(stubErrors, "stub"); err != nil {
+		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8Get(stubErrors, "stub"); err == nil {
-		t.Errorf("expected %v, got nothing", stubErrors["Get"][1])
+	if err := k8Create(stubErrors, "stub"); err == nil {
+		t.Errorf("expected %v, got nothing", stubErrors["Create"])
+	}
+	if err := k8Create(stubErrors, "stub"); err != nil {
+		t.Errorf("expected nil, got %v", err)
 	}
 
-	if err := k8Get(stubErrors, "stub"); err != nil {
+	if err := k8Update(stubErrors, "stub"); err == nil {
+		t.Errorf("expected %v, got nothing", stubErrors["Update"])
+	}
+	if err := k8Update(stubErrors, "stub"); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
 }
