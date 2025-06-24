@@ -281,30 +281,31 @@ func assertNotFound(t *testing.T, err error) {
 	}
 }
 
-func Test_K8Cli_implPropagatesError(t *testing.T) {
-	err := k8Get(nil, "impl")
-	assertNotFound(t, err)
+func Test_K8Cli_errorPropagation(t *testing.T) {
+	testCases := []struct {
+		name    string
+		cliType string
+	}{{
+		name:    "actual implementation propagates k8 cli error",
+		cliType: "impl",
+	}, {
+		name:    "stub with real k8 cli propagates error",
+		cliType: "stubWithK8",
+	}}
 
-	err = k8StatusUpdate(nil, "impl")
-	assertNotFound(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := k8Get(nil, tc.cliType)
+			assertNotFound(t, err)
 
-	err = k8Create(nil, "impl")
-	assertNotFound(t, err)
+			err = k8StatusUpdate(nil, tc.cliType)
+			assertNotFound(t, err)
 
-	err = k8Update(nil, "impl")
-	assertNotFound(t, err)
-}
+			err = k8Create(nil, tc.cliType)
+			assertNotFound(t, err)
 
-func Test_K8Cli_stubWithK8PropagatesError(t *testing.T) {
-	err := k8Get(nil, "stubWithK8")
-	assertNotFound(t, err)
-
-	err = k8StatusUpdate(nil, "stubWithK8")
-	assertNotFound(t, err)
-
-	err = k8Create(nil, "stubWithK8")
-	assertNotFound(t, err)
-
-	err = k8Update(nil, "stubWithK8")
-	assertNotFound(t, err)
+			err = k8Update(nil, tc.cliType)
+			assertNotFound(t, err)
+		})
+	}
 }
