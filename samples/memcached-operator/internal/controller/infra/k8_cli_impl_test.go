@@ -196,6 +196,15 @@ func Test_K8Cli_stubWithNilResponses(t *testing.T) {
 		name:          "error for non existing method name",
 		stubErrors:    infra.StubErrors{"NonExisting": {errors.New("NonExisting error")}},
 		expectedError: nil,
+	}, {
+		name: "nil error",
+		stubErrors: infra.StubErrors{
+			"Get":          {nil},
+			"StatusUpdate": {nil},
+			"Create":       {nil},
+			"Update":       {nil},
+		},
+		expectedError: nil,
 	}}
 
 	for _, tc := range testCases {
