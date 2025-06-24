@@ -141,46 +141,72 @@ func k8Update(stubErrors infra.StubErrors, cliType string) error {
 // Start unit tests
 func Test_K8Cli_stubWithConfigurableResponses(t *testing.T) {
 	testCases := []struct {
-		expectedErr error
-		operation   string
-	}{
-		{
-			errors.New("Get error"),
-			"Get",
+		name           string
+		stubErrors     infra.StubErrors
+		expectedErrors infra.StubErrors
+	}{{
+		name: "one error for each method",
+		stubErrors: infra.StubErrors{
+			"Get":          {errors.New("Get error")},
+			"StatusUpdate": {errors.New("StatusUpdate error")},
+			"Create":       {errors.New("Create error")},
+			"Update":       {errors.New("Update error")},
 		},
-		{
-			errors.New("StatusUpdate error"),
-			"StatusUpdate",
+		expectedErrors: infra.StubErrors{
+			"Get":          {errors.New("Get error")},
+			"StatusUpdate": {errors.New("StatusUpdate error")},
+			"Create":       {errors.New("Create error")},
+			"Update":       {errors.New("Update error")},
 		},
-		{
-			errors.New("Create error"),
-			"Create",
-		},
-		{
-			errors.New("Update error"),
-			"Update",
-		},
-	}
+	}}
 
-	stubErrors := make(map[string][]error)
+	var err error
 	for _, tc := range testCases {
-		stubErrors[tc.operation] = []error{tc.expectedErr}
+		t.Run(tc.name, func(t *testing.T) {
+			if err = k8Get(tc.stubErrors, "stub"); err == nil {
+				t.Errorf("expected %s, got nothing", tc.expectedErrors["Get"][0].Error())
+			}
+			if err.Error() != tc.expectedErrors["Get"][0].Error() {
+				t.Errorf("expected %s, got %s", tc.expectedErrors["Get"][0].Error(), err.Error())
+			}
+
+			if err = k8StatusUpdate(tc.stubErrors, "stub"); err == nil {
+				t.Errorf("expected %s, got nothing", tc.expectedErrors["StatusUpdate"][0].Error())
+			}
+			if err.Error() != tc.expectedErrors["StatusUpdate"][0].Error() {
+				t.Errorf("expected %s, got %s", tc.expectedErrors["StatusUpdate"][0].Error(), err.Error())
+			}
+
+			if err = k8Create(tc.stubErrors, "stub"); err == nil {
+				t.Errorf("expected %s, got nothing", tc.expectedErrors["Create"][0].Error())
+			}
+			if err.Error() != tc.expectedErrors["Create"][0].Error() {
+				t.Errorf("expected %s, got %s", tc.expectedErrors["Create"][0].Error(), err.Error())
+			}
+
+			if err = k8Update(tc.stubErrors, "stub"); err == nil {
+				t.Errorf("expected %s, got nothing", tc.expectedErrors["Update"][0].Error())
+			}
+			if err.Error() != tc.expectedErrors["Update"][0].Error() {
+				t.Errorf("expected %s, got %s", tc.expectedErrors["Update"][0].Error(), err.Error())
+			}
+		})
+	}
+}
+
+func Test_K8Cli_stubWithMultiErrors(t *testing.T) {
+	stubErrors := infra.StubErrors{"Get": {errors.New("err 1"), errors.New("err 2")}}
+
+	if err := k8Get(stubErrors, "stub"); err == nil {
+		t.Errorf("expected %v, got nothing", stubErrors["Get"][0])
 	}
 
 	if err := k8Get(stubErrors, "stub"); err == nil {
-		t.Errorf("expected %v, got nothing", stubErrors["Get"])
+		t.Errorf("expected %v, got nothing", stubErrors["Get"][1])
 	}
 
-	if err := k8StatusUpdate(stubErrors, "stub"); err == nil {
-		t.Errorf("expected %v, got nothing", stubErrors["StatusUpdate"])
-	}
-
-	if err := k8Create(stubErrors, "stub"); err == nil {
-		t.Errorf("expected %v, got nothing", stubErrors["Create"])
-	}
-
-	if err := k8Update(stubErrors, "stub"); err == nil {
-		t.Errorf("expected %v, got nothing", stubErrors["Update"])
+	if err := k8Get(stubErrors, "stub"); err != nil {
+		t.Errorf("expected nil, got %v", err)
 	}
 }
 
