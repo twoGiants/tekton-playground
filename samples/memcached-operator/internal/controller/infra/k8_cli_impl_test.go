@@ -272,6 +272,7 @@ func Test_K8Cli_stubWithRealK8CliWithError(t *testing.T) {
 }
 
 func assertNotFound(t *testing.T, err error) {
+	t.Helper()
 	if err == nil {
 		t.Error("expected err, got nothing")
 	}
@@ -280,7 +281,7 @@ func assertNotFound(t *testing.T, err error) {
 	}
 }
 
-func Test_K8Cli_implWithError(t *testing.T) {
+func Test_K8Cli_implPropagatesError(t *testing.T) {
 	err := k8Get(nil, "impl")
 	assertNotFound(t, err)
 
