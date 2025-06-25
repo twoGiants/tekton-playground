@@ -138,6 +138,27 @@ func k8Update(stubErrors infra.StubErrors, cliType string) error {
 	return k8.Update(ctx, pod)
 }
 
+func createStubErrors(n int) infra.StubErrors {
+	if n == 0 {
+		return infra.StubErrors{
+			"Get":          {nil},
+			"StatusUpdate": {nil},
+			"Create":       {nil},
+			"Update":       {nil},
+		}
+	}
+
+	result := make(infra.StubErrors)
+	for i := 1; i <= n; i++ {
+		result["Get"] = append(result["Get"], fmt.Errorf("Get error %d", i))
+		result["StatusUpdate"] = append(result["StatusUpdate"], fmt.Errorf("StatusUpdate error %d", i))
+		result["Create"] = append(result["Create"], fmt.Errorf("Create error %d", i))
+		result["Update"] = append(result["Update"], fmt.Errorf("Update error %d", i))
+	}
+
+	return result
+}
+
 // Start unit tests
 func Test_K8Cli_stubWithConfigurableResponses(t *testing.T) {
 	testCases := []struct {
@@ -145,19 +166,9 @@ func Test_K8Cli_stubWithConfigurableResponses(t *testing.T) {
 		stubErrors     infra.StubErrors
 		expectedErrors infra.StubErrors
 	}{{
-		name: "one error for each method",
-		stubErrors: infra.StubErrors{
-			"Get":          {errors.New("Get error")},
-			"StatusUpdate": {errors.New("StatusUpdate error")},
-			"Create":       {errors.New("Create error")},
-			"Update":       {errors.New("Update error")},
-		},
-		expectedErrors: infra.StubErrors{
-			"Get":          {errors.New("Get error")},
-			"StatusUpdate": {errors.New("StatusUpdate error")},
-			"Create":       {errors.New("Create error")},
-			"Update":       {errors.New("Update error")},
-		},
+		name:           "one error for each method",
+		stubErrors:     createStubErrors(1),
+		expectedErrors: createStubErrors(1),
 	}}
 
 	var err error
@@ -223,13 +234,8 @@ func Test_K8Cli_stubWithNilResponses(t *testing.T) {
 		stubErrors:    infra.StubErrors{"NonExisting": {errors.New("NonExisting error")}},
 		expectedError: nil,
 	}, {
-		name: "nil error",
-		stubErrors: infra.StubErrors{
-			"Get":          {nil},
-			"StatusUpdate": {nil},
-			"Create":       {nil},
-			"Update":       {nil},
-		},
+		name:          "nil error",
+		stubErrors:    createStubErrors(0),
 		expectedError: nil,
 	}}
 
@@ -255,12 +261,7 @@ func Test_K8Cli_stubWithNilResponses(t *testing.T) {
 }
 
 func Test_K8Cli_stubWithNilAfterError(t *testing.T) {
-	stubErrors := infra.StubErrors{
-		"Get":          {errors.New("Get error")},
-		"StatusUpdate": {errors.New("StatusUpdate error")},
-		"Create":       {errors.New("Create error")},
-		"Update":       {errors.New("Update error")},
-	}
+	stubErrors := createStubErrors(1)
 
 	if err := k8Get(stubErrors, "stub"); err == nil {
 		t.Errorf("expected %v, got nothing", stubErrors["Get"])
