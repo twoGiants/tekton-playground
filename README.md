@@ -11,6 +11,7 @@ Collecting Tekton knowledge, pipelines and tasks for tests, experimentation and 
 1. Samples
    - [Getting Started Sample](samples/getting-started/getting-started-sample.md)
    - [Chains Sample](samples/chains/chains-sample.md)
+1. [Reliable Distributed Systems](docs/reliable-distributed-systems.md)
 
 ## Prerequisites
 
