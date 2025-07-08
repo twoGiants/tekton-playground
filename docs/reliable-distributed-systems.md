@@ -121,3 +121,4 @@ Repeating an operation has the same effect as doing it once. This prevents error
 Applying the same `kubectl apply` manifest multiple times yields the same resource state.
 
 **Q:** Why should a payment API be idempotent?  
+**A:** So repeated requests won’t charge the customer multiple times.
