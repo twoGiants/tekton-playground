@@ -91,7 +91,12 @@ func binaryAssetsDir() string {
 
 func tnnAndPod(name, namespace string) (types.NamespacedName, *corev1.Pod) {
 	tnn := types.NamespacedName{Name: name, Namespace: namespace}
-	pod := &corev1.Pod{ObjectMeta: v1.ObjectMeta{Name: name, Namespace: namespace}}
+	pod := &corev1.Pod{
+		ObjectMeta: v1.ObjectMeta{Name: name, Namespace: namespace},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{Name: "main", Image: "busybox"}},
+		},
+	}
 	return tnn, pod
 }
 

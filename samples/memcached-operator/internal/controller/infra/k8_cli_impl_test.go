@@ -169,3 +169,17 @@ func Test_K8Cli_errorPropagation(t *testing.T) {
 		})
 	}
 }
+
+func Test_K8Cli_commandPropagation(t *testing.T) {
+	tnn, pod = tnnAndPod("existing-pod", "default")
+
+	if err := k8Create(nil, "impl"); err != nil {
+		t.Errorf("unexpected error creating pod %v", err)
+	}
+	ctx = context.Background()
+
+	existingPod := &corev1.Pod{}
+	if err := k8TestCli.Get(ctx, tnn, existingPod); err != nil {
+		t.Errorf("unexpected error getting pod %v", err)
+	}
+}
