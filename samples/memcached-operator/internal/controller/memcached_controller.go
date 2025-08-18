@@ -108,7 +108,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Let's just set the status to Unknown when no status is available
 	if len(memcached.Status.Conditions) == 0 {
-		if err := r.updateStatus(ctx, memcached,
+		if err := r.updateReconcileStatus(ctx, memcached,
 			metav1.ConditionUnknown, "Starting reconciliation"); err != nil {
 			return requeueWith(err)
 		}
@@ -135,7 +135,7 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			log.Error(err, "Failed to define new Deployment resource for Memcached")
 
 			// The following implementation will update the status
-			if err := r.updateStatus(ctx, memcached,
+			if err := r.updateReconcileStatus(ctx, memcached,
 				metav1.ConditionFalse,
 				fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", memcached.Name, err),
 			); err != nil {
@@ -190,17 +190,10 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			}
 
 			// The following implementation will update the status
-			meta.SetStatusCondition(
-				&memcached.Status.Conditions,
-				metav1.Condition{
-					Type:    typeAvailableMemcached,
-					Status:  metav1.ConditionFalse,
-					Reason:  "Resizing",
-					Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", memcached.Name, err),
-				},
-			)
-			if err := r.k8.StatusUpdate(ctx, memcached); err != nil {
-				log.Error(err, "Failed to update Memcached status")
+			if err := r.updateResizeStatus(ctx, memcached,
+				metav1.ConditionFalse,
+				fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", memcached.Name, err),
+			); err != nil {
 				return requeueWith(err)
 			}
 
@@ -217,24 +210,17 @@ func (r *MemcachedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// The following implementation will update the status
-	meta.SetStatusCondition(
-		&memcached.Status.Conditions,
-		metav1.Condition{
-			Type:    typeAvailableMemcached,
-			Status:  metav1.ConditionTrue,
-			Reason:  "Reconciling",
-			Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", memcached.Name, size),
-		},
-	)
-	if err := r.k8.StatusUpdate(ctx, memcached); err != nil {
-		log.Error(err, "Failed to update Memcached status")
+	if err := r.updateReconcileStatus(ctx, memcached,
+		metav1.ConditionTrue,
+		fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", memcached.Name, size),
+	); err != nil {
 		return requeueWith(err)
 	}
 
 	return stop()
 }
 
-func (r *MemcachedReconciler) updateStatus(
+func (r *MemcachedReconciler) updateReconcileStatus(
 	ctx context.Context,
 	memcached *cachev1alpha1.Memcached,
 	status metav1.ConditionStatus,
@@ -248,6 +234,31 @@ func (r *MemcachedReconciler) updateStatus(
 			Type:    typeAvailableMemcached,
 			Status:  status,
 			Reason:  "Reconciling",
+			Message: message,
+		},
+	)
+	if err := r.k8.StatusUpdate(ctx, memcached); err != nil {
+		log.Error(err, "Failed to update Memcached status")
+		return err
+	}
+
+	return nil
+}
+
+func (r *MemcachedReconciler) updateResizeStatus(
+	ctx context.Context,
+	memcached *cachev1alpha1.Memcached,
+	status metav1.ConditionStatus,
+	message string,
+) error {
+	log := logf.FromContext(ctx)
+
+	meta.SetStatusCondition(
+		&memcached.Status.Conditions,
+		metav1.Condition{
+			Type:    typeAvailableMemcached,
+			Status:  status,
+			Reason:  "Resizing",
 			Message: message,
 		},
 	)
