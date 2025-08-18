@@ -1,12 +1,11 @@
 package infra_test
 
 import (
-	"context"
 	"errors"
 	"testing"
 
 	"example.com/m/v2/internal/controller/infra"
-	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 func Test_K8Cli_stubWithConfigurableResponses(t *testing.T) {
@@ -172,14 +171,35 @@ func Test_K8Cli_errorPropagation(t *testing.T) {
 
 func Test_K8Cli_commandPropagation(t *testing.T) {
 	tnn, pod = tnnAndPod("existing-pod", "default")
+	imageUpdate := "ubuntu"
+	statusPhase := v1.PodPhase("Running")
 
+	// test create command propagation
 	if err := k8Create(nil, "impl"); err != nil {
 		t.Errorf("unexpected error creating pod %v", err)
 	}
-	ctx = context.Background()
 
-	existingPod := &corev1.Pod{}
-	if err := k8TestCli.Get(ctx, tnn, existingPod); err != nil {
+	// test update command propagation
+	pod.Spec.Containers[0].Image = imageUpdate
+	if err := k8Update(nil, "impl"); err != nil {
+		t.Errorf("unexpected error updating pod %v", err)
+	}
+
+	// test status update command propagation
+	pod.Status.Phase = statusPhase
+	if err := k8StatusUpdate(nil, "impl"); err != nil {
+		t.Errorf("unexpected error updating pod status %v", err)
+	}
+
+	// test get command propagation
+	_, pod = tnnAndPod("existing-pod", "default")
+	if err := k8Get(nil, "impl"); err != nil {
 		t.Errorf("unexpected error getting pod %v", err)
+	}
+	if pod.Spec.Containers[0].Image != imageUpdate {
+		t.Errorf("expected container image %s, got %s", imageUpdate, pod.Spec.Containers[0].Image)
+	}
+	if pod.Status.Phase != statusPhase {
+		t.Errorf("expected pod status %s, got %s", statusPhase, pod.Status.Phase)
 	}
 }
