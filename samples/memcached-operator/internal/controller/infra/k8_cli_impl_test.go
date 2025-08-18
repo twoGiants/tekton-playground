@@ -7,7 +7,6 @@ import (
 
 	"example.com/m/v2/internal/controller/infra"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func Test_K8Cli_stubWithConfigurableResponses(t *testing.T) {
@@ -139,30 +138,6 @@ func Test_K8Cli_stubWithNilAfterError(t *testing.T) {
 	}
 	if err := k8Update(stubErrors, "stub"); err != nil {
 		t.Errorf("expected nil, got %v", err)
-	}
-}
-
-func Test_K8Cli_stubWithRealK8CliWithError(t *testing.T) {
-	err := k8Get(nil, "stubWithK8")
-	assertNotFound(t, err)
-
-	err = k8StatusUpdate(nil, "stubWithK8")
-	assertNotFound(t, err)
-
-	err = k8Create(nil, "stubWithK8")
-	assertNotFound(t, err)
-
-	err = k8Update(nil, "stubWithK8")
-	assertNotFound(t, err)
-}
-
-func assertNotFound(t *testing.T, err error) {
-	t.Helper()
-	if err == nil {
-		t.Error("expected err, got nothing")
-	}
-	if !apierrors.IsNotFound(err) {
-		t.Errorf("expected NotFoundError, got %v", err)
 	}
 }
 

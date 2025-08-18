@@ -10,6 +10,7 @@ import (
 	cachev1alpha1 "example.com/m/v2/api/v1alpha1"
 	"example.com/m/v2/internal/controller/infra"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -153,4 +154,14 @@ func createStubErrors(n int) infra.StubErrors {
 	}
 
 	return result
+}
+
+func assertNotFound(t *testing.T, err error) {
+	t.Helper()
+	if err == nil {
+		t.Error("expected err, got nothing")
+	}
+	if !apierrors.IsNotFound(err) {
+		t.Errorf("expected NotFoundError, got %v", err)
+	}
 }
