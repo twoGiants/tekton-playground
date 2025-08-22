@@ -170,36 +170,58 @@ func Test_K8Cli_errorPropagation(t *testing.T) {
 }
 
 func Test_K8Cli_commandPropagation(t *testing.T) {
-	tnn, pod = tnnAndPod("existing-pod", "default")
-	imageUpdate := "ubuntu"
-	statusPhase := v1.PodPhase("Running")
+	testCases := []struct {
+		name,
+		podName,
+		imageUpdate,
+		cliType string
+		statusPhase v1.PodPhase
+	}{{
+		name:        "actual implementation propagates k8 cli command",
+		podName:     "existing-pod",
+		imageUpdate: "ubuntu",
+		statusPhase: "Running",
+		cliType:     "impl",
+	}, {
+		name:        "stub with real k8 cli propagates cli",
+		podName:     "second-existing-pod",
+		imageUpdate: "fedora",
+		statusPhase: "Pending",
+		cliType:     "stubWithK8",
+	}}
 
-	// test create command propagation
-	if err := k8Create(nil, "impl"); err != nil {
-		t.Errorf("unexpected error creating pod %v", err)
-	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tnn, pod = tnnAndPod(tc.podName, "default")
 
-	// test update command propagation
-	pod.Spec.Containers[0].Image = imageUpdate
-	if err := k8Update(nil, "impl"); err != nil {
-		t.Errorf("unexpected error updating pod %v", err)
-	}
+			// create command propagation
+			if err := k8Create(nil, tc.cliType); err != nil {
+				t.Errorf("unexpected error creating pod %v", err)
+			}
 
-	// test status update command propagation
-	pod.Status.Phase = statusPhase
-	if err := k8StatusUpdate(nil, "impl"); err != nil {
-		t.Errorf("unexpected error updating pod status %v", err)
-	}
+			// update command propagation
+			pod.Spec.Containers[0].Image = tc.imageUpdate
+			if err := k8Update(nil, tc.cliType); err != nil {
+				t.Errorf("unexpected error updating pod %v", err)
+			}
 
-	// test get command propagation
-	_, pod = tnnAndPod("existing-pod", "default")
-	if err := k8Get(nil, "impl"); err != nil {
-		t.Errorf("unexpected error getting pod %v", err)
-	}
-	if pod.Spec.Containers[0].Image != imageUpdate {
-		t.Errorf("expected container image %s, got %s", imageUpdate, pod.Spec.Containers[0].Image)
-	}
-	if pod.Status.Phase != statusPhase {
-		t.Errorf("expected pod status %s, got %s", statusPhase, pod.Status.Phase)
+			// status update command propagation
+			pod.Status.Phase = tc.statusPhase
+			if err := k8StatusUpdate(nil, tc.cliType); err != nil {
+				t.Errorf("unexpected error updating pod status %v", err)
+			}
+
+			// get command propagation
+			_, pod = tnnAndPod("existing-pod", "default")
+			if err := k8Get(nil, tc.cliType); err != nil {
+				t.Errorf("unexpected error getting pod %v", err)
+			}
+			if pod.Spec.Containers[0].Image != tc.imageUpdate {
+				t.Errorf("expected container image %s, got %s", tc.imageUpdate, pod.Spec.Containers[0].Image)
+			}
+			if pod.Status.Phase != tc.statusPhase {
+				t.Errorf("expected pod status %s, got %s", tc.statusPhase, pod.Status.Phase)
+			}
+		})
 	}
 }
