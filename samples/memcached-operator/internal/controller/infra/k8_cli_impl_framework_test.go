@@ -120,21 +120,57 @@ func newK8Cli(stubErrors infra.StubErrors, cliType string) *infra.K8CliImpl {
 	}
 }
 
+type options struct {
+	cmd        string
+	cliType    string
+	stubErrors infra.StubErrors
+	pod        *corev1.Pod
+	tnn        *types.NamespacedName
+}
+
+func runK8Cli(ctx context.Context, opt options) error {
+	if opt.pod == nil {
+		panic(fmt.Errorf("pod must be provided"))
+	}
+
+	k8 := newK8Cli(opt.stubErrors, opt.cliType)
+
+	switch opt.cmd {
+	case "Get":
+		if opt.tnn == nil {
+			panic(fmt.Errorf("provide a NamespacedName when using 'Get'"))
+		}
+		return k8.Get(ctx, tnn, opt.pod)
+	case "StatusUpdate":
+		return k8.StatusUpdate(ctx, opt.pod)
+	case "Create":
+		return k8.Create(ctx, opt.pod)
+	case "Update":
+		return k8.Update(ctx, opt.pod)
+	default:
+		panic(fmt.Errorf("unknown command: %s", opt.cmd))
+	}
+}
+
+// deprecated
 func k8Get(stubErrors infra.StubErrors, cliType string) error {
 	k8 := newK8Cli(stubErrors, cliType)
 	return k8.Get(ctx, tnn, pod)
 }
 
+// deprecated
 func k8StatusUpdate(stubErrors infra.StubErrors, cliType string) error {
 	k8 := newK8Cli(stubErrors, cliType)
 	return k8.StatusUpdate(ctx, pod)
 }
 
+// deprecated
 func k8Create(stubErrors infra.StubErrors, cliType string) error {
 	k8 := newK8Cli(stubErrors, cliType)
 	return k8.Create(ctx, pod)
 }
 
+// deprecated
 func k8Update(stubErrors infra.StubErrors, cliType string) error {
 	k8 := newK8Cli(stubErrors, cliType)
 	return k8.Update(ctx, pod)
