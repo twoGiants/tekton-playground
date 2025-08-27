@@ -212,7 +212,7 @@ func Test_K8Cli_commandPropagation(t *testing.T) {
 			}
 
 			// get command propagation
-			_, pod = tnnAndPod("existing-pod", "default")
+			_, pod = tnnAndPod(tc.podName, "default")
 			if err := k8Get(nil, tc.cliType); err != nil {
 				t.Errorf("unexpected error getting pod %v", err)
 			}
