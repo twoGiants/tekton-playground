@@ -1,6 +1,7 @@
 package infra_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -170,6 +171,8 @@ func Test_K8Cli_errorPropagation(t *testing.T) {
 }
 
 func Test_K8Cli_commandPropagation(t *testing.T) {
+	ctx := context.Background()
+
 	testCases := []struct {
 		name,
 		podName,
@@ -178,7 +181,7 @@ func Test_K8Cli_commandPropagation(t *testing.T) {
 		statusPhase v1.PodPhase
 	}{{
 		name:        "actual implementation propagates k8 cli command",
-		podName:     "existing-pod",
+		podName:     "first-existing-pod",
 		imageUpdate: "ubuntu",
 		statusPhase: "Running",
 		cliType:     "impl",
@@ -192,28 +195,31 @@ func Test_K8Cli_commandPropagation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tnn, pod = tnnAndPod(tc.podName, "default")
+			tnn, pod := tnnAndPod(tc.podName, "default")
+			runOpt := options{cmd: "Create", cliType: tc.cliType, pod: pod, tnn: &tnn}
 
-			// create command propagation
-			if err := k8Create(nil, tc.cliType); err != nil {
+			// create
+			if err := runK8Cli(ctx, runOpt); err != nil {
 				t.Errorf("unexpected error creating pod %v", err)
 			}
 
-			// update command propagation
+			// update
 			pod.Spec.Containers[0].Image = tc.imageUpdate
-			if err := k8Update(nil, tc.cliType); err != nil {
+			runOpt.cmd = "Update"
+			if err := runK8Cli(ctx, runOpt); err != nil {
 				t.Errorf("unexpected error updating pod %v", err)
 			}
 
-			// status update command propagation
+			// status update
 			pod.Status.Phase = tc.statusPhase
-			if err := k8StatusUpdate(nil, tc.cliType); err != nil {
+			runOpt.cmd = "StatusUpdate"
+			if err := runK8Cli(ctx, runOpt); err != nil {
 				t.Errorf("unexpected error updating pod status %v", err)
 			}
 
-			// get command propagation
-			_, pod = tnnAndPod(tc.podName, "default")
-			if err := k8Get(nil, tc.cliType); err != nil {
+			// get
+			runOpt.cmd = "Get"
+			if err := runK8Cli(ctx, runOpt); err != nil {
 				t.Errorf("unexpected error getting pod %v", err)
 			}
 			if pod.Spec.Containers[0].Image != tc.imageUpdate {

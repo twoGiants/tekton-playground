@@ -140,7 +140,7 @@ func runK8Cli(ctx context.Context, opt options) error {
 		if opt.tnn == nil {
 			panic(fmt.Errorf("provide a NamespacedName when using 'Get'"))
 		}
-		return k8.Get(ctx, tnn, opt.pod)
+		return k8.Get(ctx, *opt.tnn, opt.pod)
 	case "StatusUpdate":
 		return k8.StatusUpdate(ctx, opt.pod)
 	case "Create":
