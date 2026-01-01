@@ -62,6 +62,30 @@ ko delete -f config/
 ko delete -R -f config/
 ```
 
+Execute a hello-world `PipelineRun` and follow the logs:
+
+```sh
+kubectl create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: hello-world-run
+spec:
+  pipelineSpec:
+    tasks:
+    - name: hello
+      taskSpec:
+        steps:
+        - name: echo
+          image: alpine
+          script: |
+            #!/bin/sh
+            echo "Hello World"
+EOF
+
+kubectl logs -f hello-world-run-hello-pod
+```
+
 ## Develop
 
 If you make changes to the code, redeploy the controller.
