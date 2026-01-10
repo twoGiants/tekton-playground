@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e -o pipefail
 
-declare TEKTON_PIPELINE_VERSION TEKTON_TRIGGERS_VERSION TEKTON_DASHBOARD_VERSION CLUSTER_CONFIG SKIP_TEKTON_INSTALL
+declare TEKTON_PIPELINE_VERSION TEKTON_TRIGGERS_VERSION TEKTON_DASHBOARD_VERSION CLUSTER_CONFIG SKIP_TEKTON_INSTALL LOCAL_PIPELINE_SRC
 
 get_latest_release() {
   curl --silent "https://api.github.com/repos/$1/releases/latest" |
@@ -11,6 +11,10 @@ get_latest_release() {
 
 info() {
   echo -e "[\e[93mINFO\e[0m] $1"
+}
+
+error() {
+  echo -e "[\e[91mERROR\e[0m] $1"
 }
 
 check_defaults() {
@@ -34,6 +38,29 @@ check_defaults() {
   fi
 
   info "Using container runtime: $CONTAINER_RUNTIME"
+
+  # Support environment variable fallback
+  export LOCAL_PIPELINE_SRC=${LOCAL_PIPELINE_SRC:-$TEKTON_PIPELINE_SRC}
+
+  # Check for local pipeline source
+  if [ -n "$LOCAL_PIPELINE_SRC" ]; then
+    if ! command -v ko &> /dev/null; then
+      error "'ko' command not found. Install from https://ko.build"
+      exit 1
+    fi
+
+    if [ ! -d "$LOCAL_PIPELINE_SRC" ]; then
+      error "Local pipeline source directory not found: $LOCAL_PIPELINE_SRC"
+      exit 1
+    fi
+
+    if [ ! -d "$LOCAL_PIPELINE_SRC/config" ]; then
+      error "config/ directory not found in: $LOCAL_PIPELINE_SRC"
+      exit 1
+    fi
+
+    info "Using local Tekton Pipeline source: $LOCAL_PIPELINE_SRC"
+  fi
 }
 
 create_registry() {
@@ -90,13 +117,21 @@ connect_registry() {
 install_tekton() {
   info "Checking if Tekton is installed in the cluster..."
   running_tekton=$(kubectl get crds | grep -q "pipelines.tekton.dev" && echo "true" || echo "false")
-  if [ "${running_tekton}" != 'true' ]; then  
+  if [ "${running_tekton}" != 'true' ]; then
     info "Tekton is not installed, installing Tekton Pipeline, Triggers and Dashboard..."
-    kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/previous/"${TEKTON_PIPELINE_VERSION}"/release.yaml
+
+    if [ -n "$LOCAL_PIPELINE_SRC" ]; then
+      info "Building and deploying Tekton Pipeline from local source: ${LOCAL_PIPELINE_SRC}..."
+      (cd "${LOCAL_PIPELINE_SRC}" && ko apply -R -f config/)
+    else
+      info "Installing Tekton Pipeline from remote release..."
+      kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/previous/"${TEKTON_PIPELINE_VERSION}"/release.yaml
+    fi
+
     kubectl apply -f https://storage.googleapis.com/tekton-releases/triggers/previous/"${TEKTON_TRIGGERS_VERSION}"/release.yaml
     kubectl wait --for=condition=Established --timeout=30s crds/clusterinterceptors.triggers.tekton.dev || true # Starting from triggers v0.13
     kubectl apply -f https://storage.googleapis.com/tekton-releases/triggers/previous/"${TEKTON_TRIGGERS_VERSION}"/interceptors.yaml || true
-    kubectl apply -f https://storage.googleapis.com/tekton-releases/dashboard/previous/"${TEKTON_DASHBOARD_VERSION}"/release-full.yaml
+    kubectl apply -f https://github.com/tektoncd/dashboard/releases/download/"${TEKTON_DASHBOARD_VERSION}"/release-full.yaml
 
     info "Wait until all pods are ready..."
     kubectl wait -n tekton-pipelines --for=condition=ready pods --all --timeout=600s
@@ -107,7 +142,7 @@ install_tekton() {
   info "Tekton Dashboard available at http://localhost:9097"
 }
 
-while getopts ":c:p:t:d:s" opt; do
+while getopts ":c:p:t:d:l:s" opt; do
   case ${opt} in
   c)
     CLUSTER_NAME=$OPTARG
@@ -121,13 +156,16 @@ while getopts ":c:p:t:d:s" opt; do
   d)
     TEKTON_DASHBOARD_VERSION=$OPTARG
     ;;
+  l)
+    LOCAL_PIPELINE_SRC=$OPTARG
+    ;;
   s)
     SKIP_TEKTON_INSTALL=true
     ;;
   \?)
     echo "Invalid option: $OPTARG" 1>&2
     echo 1>&2
-    echo "Usage: tk8.sh [-c cluster-name -p pipeline-version -t triggers-version -d dashboard-version]"
+    echo "Usage: cluster.sh [-c cluster-name -p pipeline-version -t triggers-version -d dashboard-version -l local-pipeline-path -s]"
     ;;
   :)
     echo "Invalid option: $OPTARG requires an argument" 1>&2
