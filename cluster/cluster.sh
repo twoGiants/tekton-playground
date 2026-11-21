@@ -183,6 +183,24 @@ install_tekton() {
   info "Tekton Dashboard available at http://localhost:9097"
 }
 
+summary() {
+  info "Deployment summary:"
+  printf '  %-20s %s\n' "Node image" "${K8_NODE_IMAGE}"
+  printf '  %-20s %s\n' "Registry" "${reg_name} (localhost:${reg_port})"
+
+  if [ -n "$SKIP_TEKTON_INSTALL" ]; then
+    return 0
+  fi
+
+  if [ -n "$LOCAL_PIPELINE_SRC" ]; then
+    printf '  %-20s %s\n' "Tekton Pipeline" "local source (${LOCAL_PIPELINE_SRC})"
+  else
+    printf '  %-20s %s\n' "Tekton Pipeline" "${TEKTON_PIPELINE_VERSION}"
+  fi
+  printf '  %-20s %s\n' "Tekton Triggers" "${TEKTON_TRIGGERS_VERSION}"
+  printf '  %-20s %s\n' "Tekton Dashboard" "${TEKTON_DASHBOARD_VERSION}"
+}
+
 help_msg() {
   cat <<'EOF'
 Usage: cluster.sh [options]
@@ -259,3 +277,5 @@ if [ -z "$SKIP_TEKTON_INSTALL" ]; then
 else
   info "Skipping Tekton installation..."
 fi
+
+summary
